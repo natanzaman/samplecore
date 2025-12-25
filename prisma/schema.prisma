@@ -1,0 +1,206 @@
+// This is your Prisma schema file for Samplecore
+// Database-first design with strong relational modeling, constraints, and indexes
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum RequestStatus {
+  REQUESTED
+  APPROVED
+  SHIPPED
+  HANDED_OFF
+  IN_USE
+  RETURNED
+  CLOSED
+}
+
+enum SampleStage {
+  PROTOTYPE
+  DEVELOPMENT
+  PRODUCTION
+  ARCHIVED
+}
+
+enum InventoryStatus {
+  AVAILABLE
+  IN_USE
+  RESERVED
+  DAMAGED
+  ARCHIVED
+}
+
+enum InventoryLocation {
+  STUDIO_A
+  STUDIO_B
+  WAREHOUSE_A
+  WAREHOUSE_B
+  WAREHOUSE_C
+  SHOWROOM
+  PHOTO_STUDIO
+  OFFICE
+}
+
+// Models
+model ProductionItem {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  sampleItems SampleItem[]
+  comments    Comment[]
+
+  // Indexes
+  @@index([name])
+  @@index([createdAt])
+  @@map("production_items")
+}
+
+model SampleItem {
+  id               String            @id @default(cuid())
+  productionItemId String
+  stage            SampleStage       @default(PROTOTYPE)
+  color            String?
+  size             String?
+  revision         String            @default("A")
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // Relations
+  productionItem   ProductionItem    @relation(fields: [productionItemId], references: [id], onDelete: Cascade)
+  inventory        SampleInventory[]
+  requests         SampleRequest[]
+  comments         Comment[]
+
+  // Indexes
+  @@index([productionItemId])
+  @@index([stage])
+  @@index([createdAt])
+  @@unique([productionItemId, stage, color, size, revision])
+  @@map("sample_items")
+}
+
+model SampleInventory {
+  id         String            @id @default(cuid())
+  sampleItemId String
+  quantity   Int               @default(0)
+  location   InventoryLocation?
+  status     InventoryStatus   @default(AVAILABLE)
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  // Relations
+  sampleItem SampleItem        @relation(fields: [sampleItemId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([sampleItemId])
+  @@index([status])
+  @@index([location])
+  @@map("sample_inventory")
+}
+
+model Team {
+  id           String          @id @default(cuid())
+  name         String
+  address      String?
+  contactEmail String?
+  contactPhone String?
+  isInternal   Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  // Relations
+  requests     SampleRequest[]
+
+  // Indexes
+  @@index([name])
+  @@index([isInternal])
+  @@map("teams")
+}
+
+model SampleRequest {
+  id             String        @id @default(cuid())
+  sampleItemId   String
+  teamId         String
+  quantity       Int           @default(1)
+  status         RequestStatus @default(REQUESTED)
+  shippingMethod String?
+  notes          String?
+  requestedAt    DateTime      @default(now())
+  approvedAt     DateTime?
+  shippedAt      DateTime?
+  handedOffAt    DateTime?
+  returnedAt     DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  sampleItem     SampleItem    @relation(fields: [sampleItemId], references: [id], onDelete: Restrict)
+  team           Team          @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  comments       Comment[]
+
+  // Indexes
+  @@index([sampleItemId])
+  @@index([teamId])
+  @@index([status])
+  @@index([requestedAt])
+  @@map("sample_requests")
+}
+
+model Comment {
+  id               String          @id @default(cuid())
+  productionItemId String?
+  sampleItemId     String?
+  requestId        String?
+  parentCommentId  String?         // For threaded comments
+  content          String
+  authorId         String          // For MVP, simple string; can be FK to User later
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  // Relations
+  productionItem   ProductionItem? @relation(fields: [productionItemId], references: [id], onDelete: Cascade)
+  sampleItem       SampleItem?     @relation(fields: [sampleItemId], references: [id], onDelete: Cascade)
+  request          SampleRequest?  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  parent            Comment?        @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies           Comment[]       @relation("CommentReplies")
+
+  // Constraints
+  @@index([productionItemId])
+  @@index([sampleItemId])
+  @@index([requestId])
+  @@index([parentCommentId])
+  @@index([createdAt])
+  // Note: Validation that one of productionItemId, sampleItemId, or requestId must be set is handled in Zod schema
+  @@map("comments")
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  entityType String   // e.g., "SampleRequest", "SampleItem", "Inventory"
+  entityId   String
+  action     String   // e.g., "CREATED", "STATUS_CHANGED", "INVENTORY_UPDATED"
+  userId     String
+  metadata   Json?    // Flexible JSON for additional context
+  createdAt  DateTime @default(now())
+
+  // Indexes for common queries
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_events")
+}
+
