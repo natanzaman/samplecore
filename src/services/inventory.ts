@@ -16,8 +16,35 @@ export class InventoryService {
   /**
    * Get all production items with their latest sample items
    */
-  static async getProductionItemsWithSamples() {
+  static async getProductionItemsWithSamples(filters?: {
+    stage?: string;
+    color?: string;
+    size?: string;
+  }) {
+    const whereClause: any = {};
+    
+    // Build filter for sample items
+    const sampleItemFilters: any = {};
+    if (filters?.stage && filters.stage !== "all") {
+      sampleItemFilters.stage = filters.stage as any;
+    }
+    if (filters?.color && filters.color !== "all") {
+      // Use exact match for color (case-insensitive via Prisma)
+      sampleItemFilters.color = filters.color;
+    }
+    if (filters?.size && filters.size !== "all") {
+      // Use exact match for size (case-insensitive via Prisma)
+      sampleItemFilters.size = filters.size;
+    }
+    
+    if (Object.keys(sampleItemFilters).length > 0) {
+      whereClause.sampleItems = {
+        some: sampleItemFilters,
+      };
+    }
+
     return db.productionItem.findMany({
+      where: whereClause,
       include: {
         sampleItems: {
           orderBy: { createdAt: "desc" },
@@ -35,6 +62,29 @@ export class InventoryService {
         createdAt: "desc",
       },
     });
+  }
+
+  /**
+   * Get unique colors and sizes from all sample items
+   */
+  static async getUniqueColorsAndSizes() {
+    const [colors, sizes] = await Promise.all([
+      db.sampleItem.findMany({
+        where: { color: { not: null } },
+        select: { color: true },
+        distinct: ["color"],
+      }),
+      db.sampleItem.findMany({
+        where: { size: { not: null } },
+        select: { size: true },
+        distinct: ["size"],
+      }),
+    ]);
+
+    return {
+      colors: colors.map((c) => c.color).filter((c): c is string => c !== null).sort(),
+      sizes: sizes.map((s) => s.size).filter((s): s is string => s !== null).sort(),
+    };
   }
 
   /**
@@ -209,6 +259,7 @@ export class InventoryService {
       notes?: string | null;
       initialQuantity: number;
       location?: "STUDIO_A" | "STUDIO_B" | "WAREHOUSE_A" | "WAREHOUSE_B" | "WAREHOUSE_C" | "SHOWROOM" | "PHOTO_STUDIO" | "OFFICE" | null;
+      color?: string | null;
     }>
   ) {
     const user = getCurrentUser();

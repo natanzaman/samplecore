@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { RequestsService } from "@/services/requests";
 import { RequestsList } from "@/components/requests/requests-list";
 import { CreateRequestButton } from "@/components/requests/create-request-button";
+import { RequestStatusFilter } from "@/components/requests/request-status-filter";
 import { Card, CardContent } from "@/components/ui/card";
 
 type SearchParams = {
@@ -35,6 +37,12 @@ export default async function RequestsPage({
           </p>
         </div>
         <CreateRequestButton />
+      </div>
+
+      <div className="mb-6">
+        <Suspense fallback={<div className="h-10 w-[180px] bg-muted animate-pulse rounded-md" />}>
+          <RequestStatusFilter />
+        </Suspense>
       </div>
 
       {filteredRequests.length === 0 ? (

@@ -47,6 +47,57 @@ enum InventoryLocation {
   OFFICE
 }
 
+enum SampleColor {
+  BLACK
+  WHITE
+  NAVY
+  GRAY
+  CHARCOAL
+  BEIGE
+  CAMEL
+  IVORY
+  ROSE
+  SAGE
+  LIGHT_BLUE
+  RED
+  BLUE
+  GREEN
+  YELLOW
+  ORANGE
+  PURPLE
+  PINK
+  BROWN
+  TAN
+  CREAM
+  OLIVE
+  BURGUNDY
+  MAROON
+  TEAL
+  CORAL
+  LAVENDER
+  MINT
+  KHAKI
+  DENIM
+}
+
+enum SampleSize {
+  XS
+  S
+  M
+  L
+  XL
+  XXL
+  XXXL
+  ONE_SIZE
+  SMALL
+  MEDIUM
+  LARGE
+  EXTRA_LARGE
+  PETITE
+  TALL
+  REGULAR
+}
+
 // Models
 model ProductionItem {
   id          String       @id @default(cuid())
@@ -69,8 +120,8 @@ model SampleItem {
   id               String            @id @default(cuid())
   productionItemId String
   stage            SampleStage       @default(PROTOTYPE)
-  color            String?
-  size             String?
+  color            SampleColor?
+  size             SampleSize?
   revision         String            @default("A")
   notes            String?
   createdAt        DateTime          @default(now())

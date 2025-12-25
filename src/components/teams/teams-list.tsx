@@ -21,33 +21,47 @@ export function TeamsList({ teams }: { teams: TeamWithCount[] }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-4">
       {teams.map((team) => (
-        <Link key={team.id} href={`/teams/team/${team.id}`} scroll={false}>
+        <Link
+          key={team.id}
+          href={`/teams/team/${team.id}`}
+          className="block"
+          scroll={false}
+        >
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <div className="flex items-start justify-between">
-                <CardTitle className="text-lg">{team.name}</CardTitle>
+                <div className="flex-1">
+                  <CardTitle className="text-lg">{team.name}</CardTitle>
+                  <CardDescription>
+                    {team._count.requests} request{team._count.requests !== 1 ? "s" : ""}
+                  </CardDescription>
+                </div>
                 <Badge variant={team.isInternal ? "default" : "secondary"}>
                   {team.isInternal ? "Internal" : "External"}
                 </Badge>
               </div>
-              <CardDescription>
-                {team._count.requests} request{team._count.requests !== 1 ? "s" : ""}
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-1 text-sm">
+              <div className="space-y-2 text-sm">
                 {team.contactEmail && (
-                  <p className="text-muted-foreground">{team.contactEmail}</p>
+                  <div className="flex gap-4">
+                    <span className="text-muted-foreground">Email:</span>
+                    <span>{team.contactEmail}</span>
+                  </div>
                 )}
                 {team.contactPhone && (
-                  <p className="text-muted-foreground">{team.contactPhone}</p>
+                  <div className="flex gap-4">
+                    <span className="text-muted-foreground">Phone:</span>
+                    <span>{team.contactPhone}</span>
+                  </div>
                 )}
                 {team.address && (
-                  <p className="text-muted-foreground line-clamp-2">
-                    {team.address}
-                  </p>
+                  <div className="flex gap-4">
+                    <span className="text-muted-foreground">Address:</span>
+                    <span className="text-muted-foreground">{team.address}</span>
+                  </div>
                 )}
               </div>
             </CardContent>

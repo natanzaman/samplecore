@@ -45,6 +45,7 @@ export function RequestDetailContent({
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [request, setRequest] = useState(initialRequest);
   const [showCommentForm, setShowCommentForm] = useState(false);
@@ -121,6 +122,36 @@ export function RequestDetailContent({
     setError(null);
   };
 
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === request.status) return;
+    
+    setStatusLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/requests/${request.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error(errorData.message || "Failed to update status");
+      }
+
+      const updated = await response.json();
+      setRequest(updated);
+      setFormData({ ...formData, status: updated.status });
+      router.refresh();
+    } catch (err) {
+      console.error("Error updating status:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
   const statusOptions = [
     "REQUESTED",
     "APPROVED",
@@ -137,9 +168,22 @@ export function RequestDetailContent({
       <div className="flex items-start justify-between">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="text-lg px-3 py-1">
-              {request.status}
-            </Badge>
+            <Select
+              value={request.status}
+              onValueChange={handleStatusChange}
+              disabled={statusLoading}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status.replace(/_/g, " ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <span className="text-sm text-muted-foreground">
               Requested: {formatDate(request.requestedAt)}
             </span>
@@ -184,6 +228,40 @@ export function RequestDetailContent({
           {error}
         </div>
       )}
+
+      {/* Sample Item Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Sample Item
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div>
+              <span className="text-sm font-medium">
+                {request.sampleItem.productionItem.name}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Badge variant="outline">{request.sampleItem.stage}</Badge>
+              {request.sampleItem.color && (
+                <Badge variant="secondary">{request.sampleItem.color}</Badge>
+              )}
+              {request.sampleItem.size && (
+                <Badge variant="secondary">{request.sampleItem.size}</Badge>
+              )}
+            </div>
+            <Link
+              href={`/inventory/sample/${request.sampleItem.id}`}
+              className="text-sm text-primary hover:underline"
+            >
+              View sample details →
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Request Details */}
       <Card>
@@ -261,10 +339,6 @@ export function RequestDetailContent({
           ) : (
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm font-medium">Status:</span>
-                <Badge>{request.status}</Badge>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-sm font-medium">Quantity:</span>
                 <span className="text-sm">{request.quantity}</span>
               </div>
@@ -316,40 +390,6 @@ export function RequestDetailContent({
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Sample Item Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Sample Item
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div>
-              <span className="text-sm font-medium">
-                {request.sampleItem.productionItem.name}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <Badge variant="outline">{request.sampleItem.stage}</Badge>
-              {request.sampleItem.color && (
-                <Badge variant="secondary">{request.sampleItem.color}</Badge>
-              )}
-              {request.sampleItem.size && (
-                <Badge variant="secondary">{request.sampleItem.size}</Badge>
-              )}
-            </div>
-            <Link
-              href={`/inventory/sample/${request.sampleItem.id}`}
-              className="text-sm text-primary hover:underline"
-            >
-              View sample details →
-            </Link>
-          </div>
         </CardContent>
       </Card>
 

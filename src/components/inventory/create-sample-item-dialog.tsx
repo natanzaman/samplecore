@@ -30,8 +30,8 @@ type ProductionItem = {
 
 type SampleVariation = {
   stage: string;
-  color: string;
-  size: string;
+  color: string | null;
+  size: string | null;
   revision: string;
   quantity: number;
   location: string | null;
@@ -66,8 +66,8 @@ export function CreateSampleItemDialog({
   const [variations, setVariations] = useState<SampleVariation[]>([
     {
       stage: initialValues?.stage || "PROTOTYPE",
-      color: initialValues?.color || "",
-      size: initialValues?.size || "",
+      color: initialValues?.color || null,
+      size: initialValues?.size || null,
       revision: initialValues?.revision || "A",
       quantity: 0,
       location: null,
@@ -87,11 +87,11 @@ export function CreateSampleItemDialog({
       setVariations([
         {
           stage: initialValues?.stage || "PROTOTYPE",
-          color: initialValues?.color || "",
-          size: initialValues?.size || "",
+          color: initialValues?.color || null,
+          size: initialValues?.size || null,
           revision: initialValues?.revision || "A",
           quantity: 0,
-          location: "",
+          location: null,
         },
       ]);
     } else {
@@ -125,8 +125,8 @@ export function CreateSampleItemDialog({
       ...variations,
       {
         stage: "PROTOTYPE",
-        color: "",
-        size: "",
+        color: null,
+        size: null,
         revision: "A",
         quantity: 0,
         location: null,
@@ -188,8 +188,8 @@ export function CreateSampleItemDialog({
       setVariations([
         {
           stage: "PROTOTYPE",
-          color: "",
-          size: "",
+          color: null,
+          size: null,
           revision: "A",
           quantity: 0,
           location: null,
@@ -305,24 +305,79 @@ export function CreateSampleItemDialog({
 
                       <div>
                         <Label htmlFor={`color-${index}`}>Color</Label>
-                        <Input
-                          id={`color-${index}`}
-                          value={variation.color}
-                          onChange={(e) => updateVariation(index, "color", e.target.value)}
-                          placeholder="e.g., Navy Blue"
+                        <Select
+                          value={variation.color || "none"}
+                          onValueChange={(value) => updateVariation(index, "color", value === "none" ? null : value)}
                           disabled={isSubmitting}
-                        />
+                        >
+                          <SelectTrigger id={`color-${index}`}>
+                            <SelectValue placeholder="Select color" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No Color</SelectItem>
+                            <SelectItem value="BLACK">Black</SelectItem>
+                            <SelectItem value="WHITE">White</SelectItem>
+                            <SelectItem value="NAVY">Navy</SelectItem>
+                            <SelectItem value="GRAY">Gray</SelectItem>
+                            <SelectItem value="CHARCOAL">Charcoal</SelectItem>
+                            <SelectItem value="BEIGE">Beige</SelectItem>
+                            <SelectItem value="CAMEL">Camel</SelectItem>
+                            <SelectItem value="IVORY">Ivory</SelectItem>
+                            <SelectItem value="ROSE">Rose</SelectItem>
+                            <SelectItem value="SAGE">Sage</SelectItem>
+                            <SelectItem value="LIGHT_BLUE">Light Blue</SelectItem>
+                            <SelectItem value="RED">Red</SelectItem>
+                            <SelectItem value="BLUE">Blue</SelectItem>
+                            <SelectItem value="GREEN">Green</SelectItem>
+                            <SelectItem value="YELLOW">Yellow</SelectItem>
+                            <SelectItem value="ORANGE">Orange</SelectItem>
+                            <SelectItem value="PURPLE">Purple</SelectItem>
+                            <SelectItem value="PINK">Pink</SelectItem>
+                            <SelectItem value="BROWN">Brown</SelectItem>
+                            <SelectItem value="TAN">Tan</SelectItem>
+                            <SelectItem value="CREAM">Cream</SelectItem>
+                            <SelectItem value="OLIVE">Olive</SelectItem>
+                            <SelectItem value="BURGUNDY">Burgundy</SelectItem>
+                            <SelectItem value="MAROON">Maroon</SelectItem>
+                            <SelectItem value="TEAL">Teal</SelectItem>
+                            <SelectItem value="CORAL">Coral</SelectItem>
+                            <SelectItem value="LAVENDER">Lavender</SelectItem>
+                            <SelectItem value="MINT">Mint</SelectItem>
+                            <SelectItem value="KHAKI">Khaki</SelectItem>
+                            <SelectItem value="DENIM">Denim</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div>
                         <Label htmlFor={`size-${index}`}>Size</Label>
-                        <Input
-                          id={`size-${index}`}
-                          value={variation.size}
-                          onChange={(e) => updateVariation(index, "size", e.target.value)}
-                          placeholder="e.g., M, L, XL"
+                        <Select
+                          value={variation.size || "none"}
+                          onValueChange={(value) => updateVariation(index, "size", value === "none" ? null : value)}
                           disabled={isSubmitting}
-                        />
+                        >
+                          <SelectTrigger id={`size-${index}`}>
+                            <SelectValue placeholder="Select size" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No Size</SelectItem>
+                            <SelectItem value="XS">XS</SelectItem>
+                            <SelectItem value="S">S</SelectItem>
+                            <SelectItem value="M">M</SelectItem>
+                            <SelectItem value="L">L</SelectItem>
+                            <SelectItem value="XL">XL</SelectItem>
+                            <SelectItem value="XXL">XXL</SelectItem>
+                            <SelectItem value="XXXL">XXXL</SelectItem>
+                            <SelectItem value="ONE_SIZE">One Size</SelectItem>
+                            <SelectItem value="SMALL">Small</SelectItem>
+                            <SelectItem value="MEDIUM">Medium</SelectItem>
+                            <SelectItem value="LARGE">Large</SelectItem>
+                            <SelectItem value="EXTRA_LARGE">Extra Large</SelectItem>
+                            <SelectItem value="PETITE">Petite</SelectItem>
+                            <SelectItem value="TALL">Tall</SelectItem>
+                            <SelectItem value="REGULAR">Regular</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div>
@@ -393,8 +448,8 @@ export function CreateSampleItemDialog({
                   setVariations([
                     {
                       stage: "PROTOTYPE",
-                      color: "",
-                      size: "",
+                      color: null,
+                      size: null,
                       revision: "A",
                       quantity: 0,
                       location: null,

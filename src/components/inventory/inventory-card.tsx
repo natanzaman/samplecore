@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatColor } from "@/lib/color-utils";
+import { formatSize } from "@/lib/size-utils";
 import type { ProductionItem } from "@prisma/client";
 
 type InventoryCardProps = {
@@ -39,10 +41,10 @@ export function InventoryCard({ productionItem }: InventoryCardProps) {
                   <div className="flex gap-2">
                     <Badge variant="outline">{latestSample.stage}</Badge>
                     {latestSample.color && (
-                      <Badge variant="secondary">{latestSample.color}</Badge>
+                      <Badge variant="secondary">{formatColor(latestSample.color)}</Badge>
                     )}
                     {latestSample.size && (
-                      <Badge variant="secondary">{latestSample.size}</Badge>
+                      <Badge variant="secondary">{formatSize(latestSample.size)}</Badge>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground">

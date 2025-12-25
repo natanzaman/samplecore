@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { InventoryService } from "@/services/inventory";
-import { CreateSampleItemSchema, CreateInventorySchema, InventoryLocationSchema } from "@/lib/validations";
+import { CreateSampleItemSchema, CreateInventorySchema, InventoryLocationSchema, SampleColorSchema, SampleSizeSchema } from "@/lib/validations";
 import { z } from "zod";
 
 const BatchCreateSampleItemSchema = z.object({
   stage: z.enum(["PROTOTYPE", "DEVELOPMENT", "PRODUCTION", "ARCHIVED"]),
-  color: z.string().max(100).optional().nullable(),
-  size: z.string().max(50).optional().nullable(),
+  color: SampleColorSchema.optional().nullable(),
+  size: SampleSizeSchema.optional().nullable(),
   revision: z.string().max(10).default("A"),
   notes: z.string().max(1000).optional().nullable(),
   initialQuantity: z.number().int().min(0).default(0),

@@ -1,9 +1,25 @@
+import { Suspense } from "react";
 import { InventoryService } from "@/services/inventory";
 import { InventoryCard } from "@/components/inventory/inventory-card";
 import { CreateSampleItemButton } from "@/components/inventory/create-sample-item-button";
+import { InventoryFilters } from "@/components/inventory/inventory-filters";
 
-export default async function InventoryPage() {
-  const productionItems = await InventoryService.getProductionItemsWithSamples();
+type SearchParams = {
+  stage?: string;
+  color?: string;
+  size?: string;
+};
+
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const productionItems = await InventoryService.getProductionItemsWithSamples({
+    stage: searchParams.stage,
+    color: searchParams.color,
+    size: searchParams.size,
+  });
 
   return (
     <div className="container mx-auto p-6">
@@ -15,6 +31,12 @@ export default async function InventoryPage() {
           </p>
         </div>
         <CreateSampleItemButton />
+      </div>
+
+      <div className="mb-6">
+        <Suspense fallback={<div className="h-10 w-full bg-muted animate-pulse rounded-md" />}>
+          <InventoryFilters />
+        </Suspense>
       </div>
 
       {productionItems.length === 0 ? (

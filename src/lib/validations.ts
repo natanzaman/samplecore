@@ -19,6 +19,59 @@ export const SampleStageSchema = z.enum([
   "ARCHIVED",
 ]);
 
+// Sample Color enum
+export const SampleColorSchema = z.enum([
+  "BLACK",
+  "WHITE",
+  "NAVY",
+  "GRAY",
+  "CHARCOAL",
+  "BEIGE",
+  "CAMEL",
+  "IVORY",
+  "ROSE",
+  "SAGE",
+  "LIGHT_BLUE",
+  "RED",
+  "BLUE",
+  "GREEN",
+  "YELLOW",
+  "ORANGE",
+  "PURPLE",
+  "PINK",
+  "BROWN",
+  "TAN",
+  "CREAM",
+  "OLIVE",
+  "BURGUNDY",
+  "MAROON",
+  "TEAL",
+  "CORAL",
+  "LAVENDER",
+  "MINT",
+  "KHAKI",
+  "DENIM",
+]);
+
+// Sample Size enum
+export const SampleSizeSchema = z.enum([
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+  "XXXL",
+  "ONE_SIZE",
+  "SMALL",
+  "MEDIUM",
+  "LARGE",
+  "EXTRA_LARGE",
+  "PETITE",
+  "TALL",
+  "REGULAR",
+]);
+
 // Inventory Status enum
 export const InventoryStatusSchema = z.enum([
   "AVAILABLE",
@@ -52,8 +105,8 @@ export const UpdateProductionItemSchema = CreateProductionItemSchema.partial();
 export const CreateSampleItemSchema = z.object({
   productionItemId: z.string().cuid(),
   stage: SampleStageSchema.default("PROTOTYPE"),
-  color: z.string().max(100).optional(),
-  size: z.string().max(50).optional(),
+  color: SampleColorSchema.optional(),
+  size: SampleSizeSchema.optional(),
   revision: z.string().max(10).default("A"),
   notes: z.string().max(1000).optional(),
 });

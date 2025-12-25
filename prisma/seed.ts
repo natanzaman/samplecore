@@ -97,16 +97,16 @@ async function main() {
       "PRODUCTION",
     ];
     
-    // Different color palettes for different items
+    // Different color palettes for different items (using enum values)
     const colorPalettes: Record<string, string[]> = {
-      "Denim Jacket X": ["Black", "Navy", "Light Blue", "White"],
-      "Silk Blouse Premium": ["Black", "Ivory", "Rose", "Sage"],
-      "Wool Coat Classic": ["Black", "Camel", "Charcoal", "Navy"],
-      "Cotton T-Shirt Essential": ["White", "Black", "Gray", "Navy"],
+      "Denim Jacket X": ["BLACK", "NAVY", "LIGHT_BLUE", "WHITE"],
+      "Silk Blouse Premium": ["BLACK", "IVORY", "ROSE", "SAGE"],
+      "Wool Coat Classic": ["BLACK", "CAMEL", "CHARCOAL", "NAVY"],
+      "Cotton T-Shirt Essential": ["WHITE", "BLACK", "GRAY", "NAVY"],
     };
     
-    const colors = colorPalettes[prodItem.name] || ["Black", "Navy", "White", "Beige"];
-    const sizes = ["XS", "S", "M", "L", "XL"];
+    const colors = colorPalettes[prodItem.name] || ["BLACK", "NAVY", "WHITE", "BEIGE"];
+    const sizes = ["XS", "S", "M", "L", "XL"] as const;
 
     // Create all stages with all colors and sizes
     for (const stage of stages) {

@@ -19,6 +19,8 @@ import { AddInventoryDialog } from "@/components/inventory/add-inventory-dialog"
 import { CommentForm } from "@/components/comments/comment-form";
 import { CommentThread } from "@/components/comments/comment-thread";
 import { formatDate } from "@/lib/utils";
+import { formatColor } from "@/lib/color-utils";
+import { formatSize } from "@/lib/size-utils";
 import { MessageSquare, Package, FileText, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 
@@ -321,7 +323,7 @@ export function SampleDetailContent({
                     <SelectItem value="all">All Colors</SelectItem>
                     {availableOptions.colors.map((color) => (
                       <SelectItem key={color} value={color}>
-                        {color}
+                        {formatColor(color)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -343,7 +345,7 @@ export function SampleDetailContent({
                     <SelectItem value="all">All Sizes</SelectItem>
                     {availableOptions.sizes.map((size) => (
                       <SelectItem key={size} value={size}>
-                        {size}
+                        {formatSize(size)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -362,8 +364,8 @@ export function SampleDetailContent({
           )}
           <div className="flex gap-2 flex-wrap">
             <Badge>{sampleItem.stage}</Badge>
-            {sampleItem.color && <Badge variant="secondary">{sampleItem.color}</Badge>}
-            {sampleItem.size && <Badge variant="secondary">{sampleItem.size}</Badge>}
+            {sampleItem.color && <Badge variant="secondary">{formatColor(sampleItem.color)}</Badge>}
+            {sampleItem.size && <Badge variant="secondary">{formatSize(sampleItem.size)}</Badge>}
             <Badge variant="outline">Rev: {sampleItem.revision}</Badge>
           </div>
           {sampleItem.notes && (
@@ -413,7 +415,7 @@ export function SampleDetailContent({
               <div className="mt-4 space-y-3">
                 {Array.from(inventoryByLocation.entries()).map(([location, items]) => {
                   const locationKey = location || "No Location";
-                  const isCollapsed = inventoryLocationCollapsed.get(locationKey) ?? false;
+                  const isCollapsed = inventoryLocationCollapsed.get(locationKey) ?? true;
                   const totalQuantity = items.reduce((sum, inv) => sum + inv.quantity, 0);
                   
                   return (
