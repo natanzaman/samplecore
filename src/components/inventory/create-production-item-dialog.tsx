@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateProductionItemSchema } from "@/lib/validations";
 import type { CreateProductionItemInput } from "@/lib/validations";
+import { createProductionItem } from "@/actions/inventory";
+import { toast } from "@/components/ui/toast";
 import { Loader2 } from "lucide-react";
 
 type CreateProductionItemDialogProps = {
@@ -48,26 +50,26 @@ export function CreateProductionItemDialog({
     setError(null);
 
     try {
-      const response = await fetch("/api/inventory/production-items", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create production item");
+      const result = await createProductionItem(data);
+      
+      // Handle undefined result (shouldn't happen, but safety check)
+      if (!result) {
+        throw new Error("No response from server");
       }
-
-      const newProductionItem = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create production item");
+      }
+      
       reset();
-      onSuccess(newProductionItem);
+      toast.success(`Product "${result.data?.name || data.name}" created successfully`);
+      onSuccess(result.data || { id: "", name: data.name });
       onOpenChange(false);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create production item");
+      const message = err instanceof Error ? err.message : "Failed to create production item";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }

@@ -8,36 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TeamForm } from "./team-form";
 import { FileText, Edit2, X } from "lucide-react";
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
-
-type TeamWithRelations = Prisma.TeamGetPayload<{
-  include: {
-    requests: {
-      include: {
-        sampleItem: {
-          include: {
-            productionItem: true;
-          };
-        };
-      };
-      orderBy: {
-        requestedAt: "desc";
-      };
-    };
-    _count: {
-      select: {
-        requests: true;
-      };
-    };
-  };
-}>;
+import { formatStatus } from "@/lib/status-utils";
+import type { TeamWithRequests } from "@/lib/types";
 
 export function TeamDetailContent({
   team: initialTeam,
-  onViewFullPage,
 }: {
-  team: TeamWithRelations;
-  onViewFullPage?: () => void;
+  team: TeamWithRequests;
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -95,11 +72,6 @@ export function TeamDetailContent({
           </div>
         </div>
         <div className="flex gap-2">
-          {onViewFullPage && (
-            <Button variant="outline" onClick={onViewFullPage}>
-              View Full Page
-            </Button>
-          )}
           <Button variant="outline" onClick={() => setIsEditing(true)}>
             <Edit2 className="mr-2 h-4 w-4" />
             Edit
@@ -125,10 +97,10 @@ export function TeamDetailContent({
               <span className="text-sm">{team.contactPhone}</span>
             </div>
           )}
-          {team.address && (
+          {team.shippingAddress && (
             <div>
-              <span className="text-sm font-medium">Address:</span>
-              <p className="text-sm text-muted-foreground mt-1">{team.address}</p>
+              <span className="text-sm font-medium">Shipping Address:</span>
+              <p className="text-sm text-muted-foreground mt-1">{team.shippingAddress}</p>
             </div>
           )}
         </CardContent>
@@ -163,7 +135,7 @@ export function TeamDetailContent({
                           Qty: {request.quantity} • {request.shippingMethod || "No method"}
                         </p>
                       </div>
-                      <Badge>{request.status}</Badge>
+                      <Badge>{formatStatus(request.status)}</Badge>
                     </div>
                   </div>
                 </Link>

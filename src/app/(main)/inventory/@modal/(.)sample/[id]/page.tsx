@@ -4,8 +4,10 @@ import { SampleDetailModal } from "@/components/inventory/sample-detail-modal";
 
 export default async function SampleModalPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { view?: string };
 }) {
   const sampleItem = await InventoryService.getSampleItemById(params.id);
 
@@ -22,10 +24,13 @@ export default async function SampleModalPage({
     notFound();
   }
 
+  const viewMode = searchParams.view === "product" ? "product" : "sample";
+
   return (
     <SampleDetailModal
       sampleItem={sampleItem}
       productionItem={productionItem}
+      viewMode={viewMode}
     />
   );
 }

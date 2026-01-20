@@ -1,14 +1,14 @@
+import { UnifiedModal } from "@/components/inventory/unified-modal";
+
 export default function InventoryLayout({
   children,
-  modal,
 }: {
   children: React.ReactNode;
-  modal: React.ReactNode;
 }) {
   return (
     <>
       {children}
-      {modal}
+      <UnifiedModal />
     </>
   );
 }

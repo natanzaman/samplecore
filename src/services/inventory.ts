@@ -17,24 +17,48 @@ export class InventoryService {
    * Get all production items with their latest sample items
    */
   static async getProductionItemsWithSamples(filters?: {
-    stage?: string;
-    color?: string;
-    size?: string;
+    stage?: string; // Comma-separated stages
+    color?: string; // Comma-separated colors
+    size?: string; // Comma-separated sizes
+    search?: string;
+    page?: number;
+    limit?: number;
   }) {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 12;
+    const skip = (page - 1) * limit;
+    
     const whereClause: any = {};
+    
+    // Search filter - search in name and description
+    if (filters?.search) {
+      whereClause.OR = [
+        { name: { contains: filters.search, mode: "insensitive" } },
+        { description: { contains: filters.search, mode: "insensitive" } },
+      ];
+    }
+    
+    // Parse arrays from comma-separated strings
+    const stageArray = filters?.stage
+      ? filters.stage.split(",").filter(Boolean)
+      : [];
+    const colorArray = filters?.color
+      ? filters.color.split(",").filter(Boolean)
+      : [];
+    const sizeArray = filters?.size
+      ? filters.size.split(",").filter(Boolean)
+      : [];
     
     // Build filter for sample items
     const sampleItemFilters: any = {};
-    if (filters?.stage && filters.stage !== "all") {
-      sampleItemFilters.stage = filters.stage as any;
+    if (stageArray.length > 0) {
+      sampleItemFilters.stage = { in: stageArray as any[] };
     }
-    if (filters?.color && filters.color !== "all") {
-      // Use exact match for color (case-insensitive via Prisma)
-      sampleItemFilters.color = filters.color;
+    if (colorArray.length > 0) {
+      sampleItemFilters.color = { in: colorArray };
     }
-    if (filters?.size && filters.size !== "all") {
-      // Use exact match for size (case-insensitive via Prisma)
-      sampleItemFilters.size = filters.size;
+    if (sizeArray.length > 0) {
+      sampleItemFilters.size = { in: sizeArray };
     }
     
     if (Object.keys(sampleItemFilters).length > 0) {
@@ -43,25 +67,38 @@ export class InventoryService {
       };
     }
 
-    return db.productionItem.findMany({
-      where: whereClause,
-      include: {
-        sampleItems: {
-          orderBy: { createdAt: "desc" },
-          take: 1, // Latest sample item
-          include: {
-            inventory: {
-              where: {
-                status: "AVAILABLE",
+    const [items, total] = await Promise.all([
+      db.productionItem.findMany({
+        where: whereClause,
+        include: {
+          sampleItems: {
+            orderBy: { createdAt: "desc" },
+            take: 1, // Latest sample item
+            include: {
+              inventory: {
+                where: {
+                  status: "AVAILABLE",
+                },
               },
             },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      db.productionItem.count({ where: whereClause }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /**
@@ -111,6 +148,12 @@ export class InventoryService {
         sampleItems: {
           include: {
             inventory: true,
+            requests: {
+              include: {
+                team: true,
+              },
+              orderBy: { createdAt: "desc" },
+            },
             _count: {
               select: {
                 requests: true,
@@ -259,7 +302,6 @@ export class InventoryService {
       notes?: string | null;
       initialQuantity: number;
       location?: "STUDIO_A" | "STUDIO_B" | "WAREHOUSE_A" | "WAREHOUSE_B" | "WAREHOUSE_C" | "SHOWROOM" | "PHOTO_STUDIO" | "OFFICE" | null;
-      color?: string | null;
     }>
   ) {
     const user = getCurrentUser();
@@ -282,15 +324,14 @@ export class InventoryService {
           },
         });
 
-        // Create initial inventory if quantity > 0
+        // Create individual inventory records (one record per item)
         if (initialQuantity > 0) {
-          await db.sampleInventory.create({
-            data: {
+          await db.sampleInventory.createMany({
+            data: Array.from({ length: initialQuantity }, () => ({
               sampleItemId: sampleItem.id,
-              quantity: initialQuantity,
               location: location || null,
-              status: "AVAILABLE",
-            },
+              status: "AVAILABLE" as const,
+            })),
           });
         }
 
@@ -388,7 +429,7 @@ export class InventoryService {
       entityId: inventory.id,
       action: "CREATED",
       userId: user.id,
-      metadata: { quantity: inventory.quantity, location: inventory.location },
+      metadata: { location: inventory.location, status: inventory.status },
     });
 
     return inventory;
@@ -421,6 +462,13 @@ export class InventoryService {
     });
 
     return inventory;
+  }
+
+  /**
+   * Add inventory entry (alias for createInventory)
+   */
+  static async addInventory(data: CreateInventoryInput) {
+    return this.createInventory(data);
   }
 }
 

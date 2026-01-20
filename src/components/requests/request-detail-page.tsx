@@ -2,20 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { RequestDetailContent } from "./request-detail-content";
-import type { Prisma } from "@prisma/client";
-
-type RequestWithRelations = Prisma.SampleRequestGetPayload<{
-  include: {
-    sampleItem: {
-      include: {
-        productionItem: true;
-        inventory: true;
-      };
-    };
-    team: true;
-    comments: true;
-  };
-}>;
+import type { RequestWithRelations } from "@/lib/types";
 
 export function RequestDetailPage({
   request,

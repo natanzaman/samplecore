@@ -10,9 +10,24 @@ export class TeamsService {
   /**
    * Get all teams
    */
-  static async getTeams(filters?: { isInternal?: boolean }) {
+  static async getTeams(filters?: { isInternal?: boolean; search?: string }) {
+    const whereClause: any = {};
+    
+    if (filters?.isInternal !== undefined) {
+      whereClause.isInternal = filters.isInternal;
+    }
+    
+    // Search filter - search in name, email, and phone
+    if (filters?.search) {
+      whereClause.OR = [
+        { name: { contains: filters.search, mode: "insensitive" } },
+        { contactEmail: { contains: filters.search, mode: "insensitive" } },
+        { contactPhone: { contains: filters.search, mode: "insensitive" } },
+      ];
+    }
+    
     return db.team.findMany({
-      where: filters?.isInternal !== undefined ? { isInternal: filters.isInternal } : undefined,
+      where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
       include: {
         _count: {
           select: {

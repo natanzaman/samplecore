@@ -57,10 +57,10 @@ export function TeamsList({ teams }: { teams: TeamWithCount[] }) {
                     <span>{team.contactPhone}</span>
                   </div>
                 )}
-                {team.address && (
+                {team.shippingAddress && (
                   <div className="flex gap-4">
-                    <span className="text-muted-foreground">Address:</span>
-                    <span className="text-muted-foreground">{team.address}</span>
+                    <span className="text-muted-foreground">Shipping Address:</span>
+                    <span className="text-muted-foreground">{team.shippingAddress}</span>
                   </div>
                 )}
               </div>

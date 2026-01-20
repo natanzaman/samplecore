@@ -2,44 +2,16 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { SampleDetailContent } from "./sample-detail-content";
-import type { Prisma } from "@prisma/client";
-
-type SampleItemWithRelations = Prisma.SampleItemGetPayload<{
-  include: {
-    productionItem: true;
-    inventory: true;
-    comments: true;
-    requests: {
-      include: {
-        team: true;
-      };
-    };
-  };
-}>;
-
-type ProductionItemWithSamples = Prisma.ProductionItemGetPayload<{
-  include: {
-    comments: true;
-    sampleItems: {
-      include: {
-        inventory: true;
-        _count: {
-          select: {
-            requests: true;
-            comments: true;
-          };
-        };
-      };
-    };
-  };
-}>;
+import type { SampleItemWithRelations, ProductionItemWithSamples } from "@/lib/types";
 
 export function SampleDetailPage({
   sampleItem,
   productionItem,
+  viewMode = "sample",
 }: {
   sampleItem: SampleItemWithRelations;
   productionItem: ProductionItemWithSamples;
+  viewMode?: "product" | "sample";
 }) {
   return (
     <div className="container mx-auto p-6 max-w-6xl">
@@ -60,6 +32,7 @@ export function SampleDetailPage({
       <SampleDetailContent
         sampleItem={sampleItem}
         productionItem={productionItem}
+        viewMode={viewMode}
       />
     </div>
   );

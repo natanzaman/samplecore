@@ -144,7 +144,6 @@ model SampleItem {
 model SampleInventory {
   id         String            @id @default(cuid())
   sampleItemId String
-  quantity   Int               @default(0)
   location   InventoryLocation?
   status     InventoryStatus   @default(AVAILABLE)
   notes      String?
@@ -162,14 +161,15 @@ model SampleInventory {
 }
 
 model Team {
-  id           String          @id @default(cuid())
-  name         String
-  address      String?
-  contactEmail String?
-  contactPhone String?
-  isInternal   Boolean         @default(true)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id              String          @id @default(cuid())
+  name            String
+  shippingAddress String?         // Team's default shipping address
+  contactEmail    String?
+  contactPhone    String?
+  isInternal      Boolean         @default(true)
+  shippingMethod  String?         // Team's preferred shipping method
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   // Relations
   requests     SampleRequest[]
@@ -181,21 +181,22 @@ model Team {
 }
 
 model SampleRequest {
-  id             String        @id @default(cuid())
-  sampleItemId   String
-  teamId         String
-  quantity       Int           @default(1)
-  status         RequestStatus @default(REQUESTED)
-  shippingMethod String?
-  notes          String?
-  requestedAt    DateTime      @default(now())
-  approvedAt     DateTime?
-  shippedAt      DateTime?
-  handedOffAt    DateTime?
-  returnedAt     DateTime?
-  closedAt       DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id              String        @id @default(cuid())
+  sampleItemId    String
+  teamId          String
+  quantity        Int           @default(1)
+  status          RequestStatus @default(REQUESTED)
+  shippingMethod  String?
+  shippingAddress String?       // Override address for this specific request
+  notes           String?
+  requestedAt     DateTime      @default(now())
+  approvedAt      DateTime?
+  shippedAt       DateTime?
+  handedOffAt     DateTime?
+  returnedAt      DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   // Relations
   sampleItem     SampleItem    @relation(fields: [sampleItemId], references: [id], onDelete: Restrict)

@@ -2,34 +2,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { TeamDetailContent } from "./team-detail-content";
-import type { Prisma } from "@prisma/client";
-
-type TeamWithRelations = Prisma.TeamGetPayload<{
-  include: {
-    requests: {
-      include: {
-        sampleItem: {
-          include: {
-            productionItem: true;
-          };
-        };
-      };
-      orderBy: {
-        requestedAt: "desc";
-      };
-    };
-    _count: {
-      select: {
-        requests: true;
-      };
-    };
-  };
-}>;
+import type { TeamWithRequests } from "@/lib/types";
 
 export function TeamDetailPage({
   team,
 }: {
-  team: TeamWithRelations;
+  team: TeamWithRequests;
 }) {
   return (
     <div className="container mx-auto p-6 max-w-6xl">

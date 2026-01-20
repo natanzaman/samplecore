@@ -118,7 +118,6 @@ export const UpdateSampleItemSchema = CreateSampleItemSchema.partial().extend({
 // Inventory schemas
 export const CreateInventorySchema = z.object({
   sampleItemId: z.string().cuid(),
-  quantity: z.number().int().min(0).default(0),
   location: InventoryLocationSchema.optional(),
   status: InventoryStatusSchema.default("AVAILABLE"),
   notes: z.string().max(1000).optional(),
@@ -131,7 +130,7 @@ export const UpdateInventorySchema = CreateInventorySchema.partial().extend({
 // Team schemas
 export const CreateTeamSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
-  address: z.string().max(500).optional(),
+  shippingAddress: z.string().max(500).optional(),
   contactEmail: z.string().email().optional().or(z.literal("")),
   contactPhone: z.string().max(50).optional(),
   isInternal: z.boolean().default(true),
@@ -145,6 +144,7 @@ export const CreateSampleRequestSchema = z.object({
   teamId: z.string().cuid(),
   quantity: z.number().int().min(1).default(1),
   shippingMethod: z.string().max(255).optional(),
+  shippingAddress: z.string().max(500).optional(),
   notes: z.string().max(1000).optional(),
 });
 
@@ -152,6 +152,7 @@ export const UpdateSampleRequestSchema = z.object({
   status: RequestStatusSchema.optional(),
   quantity: z.number().int().min(1).optional(),
   shippingMethod: z.string().max(255).optional().or(z.literal("")),
+  shippingAddress: z.string().max(500).optional().or(z.literal("")),
   notes: z.string().max(1000).optional().or(z.literal("")),
   approvedAt: z.coerce.date().optional(),
   shippedAt: z.coerce.date().optional(),

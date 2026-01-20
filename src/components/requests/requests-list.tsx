@@ -3,21 +3,10 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/utils";
-import type { Prisma } from "@prisma/client";
+import { formatDate, formatStatus, getStatusVariant } from "@/lib";
+import type { RequestWithSampleAndTeam } from "@/lib/types";
 
-type RequestWithRelations = Prisma.SampleRequestGetPayload<{
-  include: {
-    sampleItem: {
-      include: {
-        productionItem: true;
-      };
-    };
-    team: true;
-  };
-}>;
-
-export function RequestsList({ requests }: { requests: RequestWithRelations[] }) {
+export function RequestsList({ requests }: { requests: RequestWithSampleAndTeam[] }) {
   return (
     <div className="space-y-4">
       {requests.map((request) => (
@@ -38,7 +27,7 @@ export function RequestsList({ requests }: { requests: RequestWithRelations[] })
                   {request.team.name} • Qty: {request.quantity}
                 </CardDescription>
               </div>
-              <Badge>{request.status}</Badge>
+              <Badge variant={getStatusVariant(request.status)}>{formatStatus(request.status)}</Badge>
             </div>
           </CardHeader>
           <CardContent>

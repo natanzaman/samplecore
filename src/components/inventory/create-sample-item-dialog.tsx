@@ -20,6 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CreateProductionItemDialog } from "./create-production-item-dialog";
+import { toast } from "@/components/ui/toast";
+import {
+  STAGE_OPTIONS,
+  COLOR_OPTIONS,
+  SIZE_OPTIONS,
+  LOCATION_OPTIONS,
+} from "@/lib";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
 type ProductionItem = {
@@ -105,7 +112,9 @@ export function CreateSampleItemDialog({
       const response = await fetch("/api/inventory/production-items");
       if (response.ok) {
         const data = await response.json();
-        setProductionItems(data);
+        // Handle both array and paginated response
+        const items = Array.isArray(data) ? data : data.items || [];
+        setProductionItems(items);
       }
     } catch (err) {
       console.error("Failed to fetch production items:", err);
@@ -161,6 +170,8 @@ export function CreateSampleItemDialog({
     setError(null);
 
     try {
+      // Still using fetch for batch creation since it's a complex operation
+      // Could be converted to a Server Action if needed
       const response = await fetch("/api/inventory/samples/batch", {
         method: "POST",
         headers: {
@@ -185,6 +196,7 @@ export function CreateSampleItemDialog({
         throw new Error(errorData.message || "Failed to create sample items");
       }
 
+      toast.success(`Created ${variations.length} sample item${variations.length !== 1 ? "s" : ""} successfully`);
       setVariations([
         {
           stage: "PROTOTYPE",
@@ -200,7 +212,9 @@ export function CreateSampleItemDialog({
       router.refresh();
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create sample items");
+      const message = err instanceof Error ? err.message : "Failed to create sample items";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -295,10 +309,11 @@ export function CreateSampleItemDialog({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="PROTOTYPE">Prototype</SelectItem>
-                            <SelectItem value="DEVELOPMENT">Development</SelectItem>
-                            <SelectItem value="PRODUCTION">Production</SelectItem>
-                            <SelectItem value="ARCHIVED">Archived</SelectItem>
+                            {STAGE_OPTIONS.map((stage) => (
+                              <SelectItem key={stage.value} value={stage.value}>
+                                {stage.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -315,36 +330,11 @@ export function CreateSampleItemDialog({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">No Color</SelectItem>
-                            <SelectItem value="BLACK">Black</SelectItem>
-                            <SelectItem value="WHITE">White</SelectItem>
-                            <SelectItem value="NAVY">Navy</SelectItem>
-                            <SelectItem value="GRAY">Gray</SelectItem>
-                            <SelectItem value="CHARCOAL">Charcoal</SelectItem>
-                            <SelectItem value="BEIGE">Beige</SelectItem>
-                            <SelectItem value="CAMEL">Camel</SelectItem>
-                            <SelectItem value="IVORY">Ivory</SelectItem>
-                            <SelectItem value="ROSE">Rose</SelectItem>
-                            <SelectItem value="SAGE">Sage</SelectItem>
-                            <SelectItem value="LIGHT_BLUE">Light Blue</SelectItem>
-                            <SelectItem value="RED">Red</SelectItem>
-                            <SelectItem value="BLUE">Blue</SelectItem>
-                            <SelectItem value="GREEN">Green</SelectItem>
-                            <SelectItem value="YELLOW">Yellow</SelectItem>
-                            <SelectItem value="ORANGE">Orange</SelectItem>
-                            <SelectItem value="PURPLE">Purple</SelectItem>
-                            <SelectItem value="PINK">Pink</SelectItem>
-                            <SelectItem value="BROWN">Brown</SelectItem>
-                            <SelectItem value="TAN">Tan</SelectItem>
-                            <SelectItem value="CREAM">Cream</SelectItem>
-                            <SelectItem value="OLIVE">Olive</SelectItem>
-                            <SelectItem value="BURGUNDY">Burgundy</SelectItem>
-                            <SelectItem value="MAROON">Maroon</SelectItem>
-                            <SelectItem value="TEAL">Teal</SelectItem>
-                            <SelectItem value="CORAL">Coral</SelectItem>
-                            <SelectItem value="LAVENDER">Lavender</SelectItem>
-                            <SelectItem value="MINT">Mint</SelectItem>
-                            <SelectItem value="KHAKI">Khaki</SelectItem>
-                            <SelectItem value="DENIM">Denim</SelectItem>
+                            {COLOR_OPTIONS.map((color) => (
+                              <SelectItem key={color.value} value={color.value}>
+                                {color.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -361,21 +351,11 @@ export function CreateSampleItemDialog({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">No Size</SelectItem>
-                            <SelectItem value="XS">XS</SelectItem>
-                            <SelectItem value="S">S</SelectItem>
-                            <SelectItem value="M">M</SelectItem>
-                            <SelectItem value="L">L</SelectItem>
-                            <SelectItem value="XL">XL</SelectItem>
-                            <SelectItem value="XXL">XXL</SelectItem>
-                            <SelectItem value="XXXL">XXXL</SelectItem>
-                            <SelectItem value="ONE_SIZE">One Size</SelectItem>
-                            <SelectItem value="SMALL">Small</SelectItem>
-                            <SelectItem value="MEDIUM">Medium</SelectItem>
-                            <SelectItem value="LARGE">Large</SelectItem>
-                            <SelectItem value="EXTRA_LARGE">Extra Large</SelectItem>
-                            <SelectItem value="PETITE">Petite</SelectItem>
-                            <SelectItem value="TALL">Tall</SelectItem>
-                            <SelectItem value="REGULAR">Regular</SelectItem>
+                            {SIZE_OPTIONS.map((size) => (
+                              <SelectItem key={size.value} value={size.value}>
+                                {size.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -419,14 +399,11 @@ export function CreateSampleItemDialog({
                             <SelectValue placeholder="Select location" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="STUDIO_A">Studio A</SelectItem>
-                            <SelectItem value="STUDIO_B">Studio B</SelectItem>
-                            <SelectItem value="WAREHOUSE_A">Warehouse A</SelectItem>
-                            <SelectItem value="WAREHOUSE_B">Warehouse B</SelectItem>
-                            <SelectItem value="WAREHOUSE_C">Warehouse C</SelectItem>
-                            <SelectItem value="SHOWROOM">Showroom</SelectItem>
-                            <SelectItem value="PHOTO_STUDIO">Photo Studio</SelectItem>
-                            <SelectItem value="OFFICE">Office</SelectItem>
+                            {LOCATION_OPTIONS.map((loc) => (
+                              <SelectItem key={loc.value} value={loc.value}>
+                                {loc.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>

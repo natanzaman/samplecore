@@ -4,8 +4,10 @@ import { SampleDetailPage } from "@/components/inventory/sample-detail-page";
 
 export default async function SampleDetailPageRoute({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { view?: string };
 }) {
   const sampleItem = await InventoryService.getSampleItemById(params.id);
 
@@ -22,10 +24,13 @@ export default async function SampleDetailPageRoute({
     notFound();
   }
 
+  const viewMode = searchParams.view === "product" ? "product" : "sample";
+
   return (
     <SampleDetailPage
       sampleItem={sampleItem}
       productionItem={productionItem}
+      viewMode={viewMode}
     />
   );
 }

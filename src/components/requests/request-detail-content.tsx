@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useOptimistic, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,35 +17,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CommentForm } from "@/components/comments/comment-form";
 import { CommentThread } from "@/components/comments/comment-thread";
+import { useToast } from "@/components/ui/toast";
+import { updateRequestStatus, updateRequest } from "@/actions/requests";
 import { formatDate } from "@/lib/utils";
-import { MessageSquare, Package, FileText, Edit2, Save, X, ChevronDown, ChevronUp } from "lucide-react";
+import { MessageSquare, Package, FileText, Edit2, Save, X, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
-
-type RequestWithRelations = Prisma.SampleRequestGetPayload<{
-  include: {
-    sampleItem: {
-      include: {
-        productionItem: true;
-        inventory: true;
-      };
-    };
-    team: true;
-    comments: true;
-  };
-}>;
+import type { RequestStatus } from "@prisma/client";
+import type { RequestWithRelations } from "@/lib/types";
+import { STATUS_OPTIONS } from "@/lib/status-utils";
 
 export function RequestDetailContent({
   request: initialRequest,
-  onViewFullPage,
 }: {
   request: RequestWithRelations;
-  onViewFullPage?: () => void;
 }) {
   const router = useRouter();
+  const toast = useToast();
+  const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [statusLoading, setStatusLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [request, setRequest] = useState(initialRequest);
   const [showCommentForm, setShowCommentForm] = useState(false);
@@ -57,6 +47,12 @@ export function RequestDetailContent({
     shippingMethod: request.shippingMethod || "",
     notes: request.notes || "",
   });
+
+  // Optimistic status state
+  const [optimisticStatus, setOptimisticStatus] = useOptimistic(
+    request.status,
+    (_, newStatus: RequestStatus) => newStatus
+  );
 
   // Handler for toggling comment collapse state
   const handleCommentToggle = (commentId: string) => {
@@ -73,39 +69,40 @@ export function RequestDetailContent({
     setError(null);
 
     try {
-      // Prepare payload - only include fields that have changed or are being set
-      const payload: any = {};
+      // Prepare payload - only include fields that have changed
+      const payload: {
+        status?: RequestStatus;
+        quantity?: number;
+        shippingMethod?: string | null;
+        notes?: string | null;
+      } = {};
+      
       if (formData.status !== request.status) {
-        payload.status = formData.status;
+        payload.status = formData.status as RequestStatus;
       }
       if (formData.quantity !== request.quantity) {
         payload.quantity = formData.quantity;
       }
       if (formData.shippingMethod !== (request.shippingMethod || "")) {
-        payload.shippingMethod = formData.shippingMethod || undefined;
+        payload.shippingMethod = formData.shippingMethod || null;
       }
       if (formData.notes !== (request.notes || "")) {
-        payload.notes = formData.notes || undefined;
+        payload.notes = formData.notes || null;
       }
 
-      const response = await fetch(`/api/requests/${request.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
-        throw new Error(errorData.message || "Failed to update request");
+      const result = await updateRequest(request.id, payload);
+      
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
-      const updated = await response.json();
-      setRequest(updated);
+      setRequest(result.data as RequestWithRelations);
       setIsEditing(false);
-      router.refresh();
+      toast.success("Request updated successfully");
     } catch (err) {
       console.error("Error saving request:", err);
       setError(err instanceof Error ? err.message : "An error occurred");
+      toast.error(err instanceof Error ? err.message : "Failed to update request");
     } finally {
       setLoading(false);
     }
@@ -122,45 +119,34 @@ export function RequestDetailContent({
     setError(null);
   };
 
-  const handleStatusChange = async (newStatus: string) => {
-    if (newStatus === request.status) return;
+  // Optimistic status change handler
+  const handleStatusChange = (newStatus: string) => {
+    if (newStatus === optimisticStatus) return;
     
-    setStatusLoading(true);
+    const previousStatus = request.status;
     setError(null);
 
-    try {
-      const response = await fetch(`/api/requests/${request.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
+    startTransition(async () => {
+      // Optimistically update the UI immediately
+      setOptimisticStatus(newStatus as RequestStatus);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Unknown error" }));
-        throw new Error(errorData.message || "Failed to update status");
+      const result = await updateRequestStatus(request.id, newStatus as RequestStatus);
+      
+      if (!result.success) {
+        // Revert on failure
+        setOptimisticStatus(previousStatus);
+        setError(result.error || "Failed to update status");
+        toast.error(result.error || "Failed to update status");
+      } else {
+        // Update local state with server response
+        setRequest(result.data as RequestWithRelations);
+        setFormData((prev) => ({ ...prev, status: newStatus }));
+        toast.success(`Status updated to ${newStatus.replace(/_/g, " ")}`);
       }
-
-      const updated = await response.json();
-      setRequest(updated);
-      setFormData({ ...formData, status: updated.status });
-      router.refresh();
-    } catch (err) {
-      console.error("Error updating status:", err);
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setStatusLoading(false);
-    }
+    });
   };
 
-  const statusOptions = [
-    "REQUESTED",
-    "APPROVED",
-    "SHIPPED",
-    "HANDED_OFF",
-    "IN_USE",
-    "RETURNED",
-    "CLOSED",
-  ];
+  const statusOptions = STATUS_OPTIONS;
 
   return (
     <div className="space-y-6">
@@ -169,17 +155,24 @@ export function RequestDetailContent({
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <Select
-              value={request.status}
+              value={optimisticStatus}
               onValueChange={handleStatusChange}
-              disabled={statusLoading}
+              disabled={isPending}
             >
               <SelectTrigger className="w-[180px]">
-                <SelectValue />
+                {isPending ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Updating...</span>
+                  </div>
+                ) : (
+                  <SelectValue />
+                )}
               </SelectTrigger>
               <SelectContent>
                 {statusOptions.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status.replace(/_/g, " ")}
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -198,11 +191,6 @@ export function RequestDetailContent({
           </div>
         </div>
         <div className="flex gap-2">
-          {onViewFullPage && (
-            <Button variant="outline" onClick={onViewFullPage}>
-              View Full Page
-            </Button>
-          )}
           {!isEditing ? (
             <Button variant="outline" onClick={() => setIsEditing(true)}>
               <Edit2 className="mr-2 h-4 w-4" />

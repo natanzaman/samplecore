@@ -8,50 +8,42 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { TeamDetailContent } from "./team-detail-content";
-import type { Prisma } from "@prisma/client";
-
-type TeamWithRelations = Prisma.TeamGetPayload<{
-  include: {
-    requests: {
-      include: {
-        sampleItem: {
-          include: {
-            productionItem: true;
-          };
-        };
-      };
-    };
-    _count: {
-      select: {
-        requests: true;
-      };
-    };
-  };
-}>;
+import type { TeamWithRequests } from "@/lib/types";
 
 export function TeamDetailModal({
   team,
 }: {
-  team: TeamWithRelations;
+  team: TeamWithRequests;
 }) {
   const router = useRouter();
+
+  const handleViewFullPage = () => {
+    window.location.href = `/teams/team/${team.id}`;
+  };
 
   return (
     <Dialog open onOpenChange={(open) => !open && router.back()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{team.name}</DialogTitle>
-          <DialogDescription>
-            Team details and management
-          </DialogDescription>
+        <DialogHeader className="pr-12">
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>{team.name}</DialogTitle>
+              <DialogDescription>
+                Team details and management
+              </DialogDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleViewFullPage}
+            >
+              View Full Page
+            </Button>
+          </div>
         </DialogHeader>
-        <TeamDetailContent
-          team={team}
-          onViewFullPage={() => {
-            window.location.href = `/teams/team/${team.id}`;
-          }}
-        />
+        <TeamDetailContent team={team} />
       </DialogContent>
     </Dialog>
   );

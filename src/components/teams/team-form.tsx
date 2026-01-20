@@ -38,7 +38,7 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
     defaultValues: team
       ? {
           name: team.name,
-          address: team.address || "",
+          shippingAddress: team.shippingAddress || "",
           contactEmail: team.contactEmail || "",
           contactPhone: team.contactPhone || "",
           isInternal: team.isInternal,
@@ -125,15 +125,15 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
       </div>
 
       <div>
-        <Label htmlFor="address">Address</Label>
+        <Label htmlFor="shippingAddress">Shipping Address</Label>
         <Textarea
-          id="address"
-          {...register("address")}
+          id="shippingAddress"
+          {...register("shippingAddress")}
           placeholder="123 Street, City, State ZIP"
         />
-        {errors.address && (
+        {errors.shippingAddress && (
           <p className="text-sm text-destructive mt-1">
-            {errors.address.message}
+            {errors.shippingAddress.message}
           </p>
         )}
       </div>

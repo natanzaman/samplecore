@@ -16,11 +16,4 @@ export function getCurrentUser() {
   };
 }
 
-/**
- * Check if user has required role
- */
-export function hasRole(requiredRole: string): boolean {
-  const user = getCurrentUser();
-  return user.role === requiredRole;
-}
 

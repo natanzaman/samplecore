@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { createComment } from "@/actions/comments";
+import { toast } from "@/components/ui/toast";
 import { Loader2 } from "lucide-react";
 
 type CommentFormProps = {
@@ -39,30 +41,26 @@ export function CommentForm({
     setError(null);
 
     try {
-      const response = await fetch("/api/comments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          productionItemId,
-          sampleItemId,
-          requestId,
-          parentCommentId,
-          content: content.trim(),
-        }),
+      const result = await createComment({
+        productionItemId,
+        sampleItemId,
+        requestId,
+        parentCommentId,
+        content: content.trim(),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to create comment");
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create comment");
       }
 
+      toast.success("Comment posted");
       setContent("");
       router.refresh();
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create comment");
+      const message = err instanceof Error ? err.message : "Failed to create comment";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }

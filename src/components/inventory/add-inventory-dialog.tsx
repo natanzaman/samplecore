@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -21,8 +22,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreateInventorySchema, InventoryLocationSchema } from "@/lib/validations";
+import { CreateInventorySchema } from "@/lib/validations";
 import type { CreateInventoryInput } from "@/lib/validations";
+import { z } from "zod";
+import { addInventory } from "@/actions/inventory";
+import { toast } from "@/components/ui/toast";
+import { LOCATION_OPTIONS, INVENTORY_STATUS_OPTIONS } from "@/lib";
 import { Loader2 } from "lucide-react";
 
 type AddInventoryDialogProps = {
@@ -38,6 +43,7 @@ export function AddInventoryDialog({
   sampleItemId,
   onSuccess,
 }: AddInventoryDialogProps) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,11 +54,13 @@ export function AddInventoryDialog({
     reset,
     setValue,
     watch,
-  } = useForm<CreateInventoryInput>({
-    resolver: zodResolver(CreateInventorySchema),
+  } = useForm<CreateInventoryInput & { itemCount: number }>({
+    resolver: zodResolver(CreateInventorySchema.extend({
+      itemCount: z.number().int().min(1).default(1),
+    })),
     defaultValues: {
       sampleItemId,
-      quantity: 0,
+      itemCount: 1,
       status: "AVAILABLE",
       location: undefined,
     },
@@ -60,29 +68,37 @@ export function AddInventoryDialog({
 
   const location = watch("location");
 
-  const onSubmit = async (data: CreateInventoryInput) => {
+  const onSubmit = async (data: CreateInventoryInput & { itemCount: number }) => {
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const response = await fetch("/api/inventory", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      // Create multiple inventory records (one per item)
+      const results = await Promise.all(
+        Array.from({ length: data.itemCount }, () =>
+          addInventory({
+            sampleItemId: data.sampleItemId,
+            location: data.location as any,
+            status: data.status,
+            notes: data.notes,
+          })
+        )
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add inventory");
+      const failed = results.find((r) => !r.success);
+      if (failed) {
+        throw new Error(failed.error || "Failed to add some inventory items");
       }
 
+      toast.success(`Added ${data.itemCount} inventory item${data.itemCount !== 1 ? "s" : ""} successfully`);
       reset();
       onOpenChange(false);
+      router.refresh();
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add inventory");
+      const message = err instanceof Error ? err.message : "Failed to add inventory";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -99,16 +115,19 @@ export function AddInventoryDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="quantity">Quantity *</Label>
+            <Label htmlFor="itemCount">Number of Items to Add *</Label>
             <Input
-              id="quantity"
+              id="itemCount"
               type="number"
-              min="0"
-              {...register("quantity", { valueAsNumber: true })}
+              min="1"
+              {...register("itemCount", { valueAsNumber: true })}
               disabled={isSubmitting}
             />
-            {errors.quantity && (
-              <p className="text-sm text-destructive mt-1">{errors.quantity.message}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Each item will be tracked individually
+            </p>
+            {errors.itemCount && (
+              <p className="text-sm text-destructive mt-1">{errors.itemCount.message}</p>
             )}
           </div>
 
@@ -123,14 +142,11 @@ export function AddInventoryDialog({
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="STUDIO_A">Studio A</SelectItem>
-                <SelectItem value="STUDIO_B">Studio B</SelectItem>
-                <SelectItem value="WAREHOUSE_A">Warehouse A</SelectItem>
-                <SelectItem value="WAREHOUSE_B">Warehouse B</SelectItem>
-                <SelectItem value="WAREHOUSE_C">Warehouse C</SelectItem>
-                <SelectItem value="SHOWROOM">Showroom</SelectItem>
-                <SelectItem value="PHOTO_STUDIO">Photo Studio</SelectItem>
-                <SelectItem value="OFFICE">Office</SelectItem>
+                {LOCATION_OPTIONS.map((loc) => (
+                  <SelectItem key={loc.value} value={loc.value}>
+                    {loc.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             {errors.location && (
@@ -149,11 +165,11 @@ export function AddInventoryDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="AVAILABLE">Available</SelectItem>
-                <SelectItem value="IN_USE">In Use</SelectItem>
-                <SelectItem value="RESERVED">Reserved</SelectItem>
-                <SelectItem value="DAMAGED">Damaged</SelectItem>
-                <SelectItem value="ARCHIVED">Archived</SelectItem>
+                {INVENTORY_STATUS_OPTIONS.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             {errors.status && (

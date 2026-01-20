@@ -11,45 +11,104 @@ import { getCurrentUser } from "@/lib/auth";
  */
 export class RequestsService {
   /**
-   * Get all requests with filters
+   * Get all requests with filters and pagination
    */
   static async getRequests(filters?: {
-    status?: string;
-    teamId?: string;
+    status?: string; // Comma-separated statuses
+    teamId?: string; // Comma-separated team IDs
     sampleItemId?: string;
+    productName?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
   }) {
-    return db.sampleRequest.findMany({
-      where: {
-        ...(filters?.status && { status: filters.status as any }),
-        ...(filters?.teamId && { teamId: filters.teamId }),
-        ...(filters?.sampleItemId && { sampleItemId: filters.sampleItemId }),
-      },
-      include: {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
+    const skip = (page - 1) * limit;
+    
+    // Build date range filter
+    const dateFilter: any = {};
+    if (filters?.dateFrom) {
+      const startDate = new Date(filters.dateFrom);
+      startDate.setHours(0, 0, 0, 0);
+      dateFilter.gte = startDate;
+    }
+    if (filters?.dateTo) {
+      // Set to end of day to include the entire end date
+      const endDate = new Date(filters.dateTo);
+      endDate.setHours(23, 59, 59, 999);
+      dateFilter.lte = endDate;
+    }
+
+    // Parse status array from comma-separated string
+    const statusArray = filters?.status
+      ? filters.status.split(",").filter(Boolean)
+      : [];
+
+    // Parse team array from comma-separated string
+    const teamArray = filters?.teamId
+      ? filters.teamId.split(",").filter(Boolean)
+      : [];
+
+    const whereClause: any = {
+      ...(statusArray.length > 0 && { status: { in: statusArray as any[] } }),
+      ...(teamArray.length > 0 && { teamId: { in: teamArray } }),
+      ...(filters?.sampleItemId && { sampleItemId: filters.sampleItemId }),
+      ...(Object.keys(dateFilter).length > 0 && { requestedAt: dateFilter }),
+      ...(filters?.productName && filters.productName.trim() && {
         sampleItem: {
-          include: {
-            productionItem: true,
+          productionItem: {
+            name: {
+              contains: filters.productName.trim(),
+              mode: "insensitive" as const,
+            },
           },
         },
-        team: true,
-        comments: {
-          where: { parentCommentId: null }, // Only top-level comments
-          orderBy: { createdAt: "desc" },
-          include: {
-            replies: {
-              orderBy: { createdAt: "asc" },
-              include: {
-                replies: {
-                  orderBy: { createdAt: "asc" },
+      }),
+    };
+
+    const [items, total] = await Promise.all([
+      db.sampleRequest.findMany({
+        where: whereClause,
+        include: {
+          sampleItem: {
+            include: {
+              productionItem: true,
+            },
+          },
+          team: true,
+          comments: {
+            where: { parentCommentId: null }, // Only top-level comments
+            orderBy: { createdAt: "desc" },
+            include: {
+              replies: {
+                orderBy: { createdAt: "asc" },
+                include: {
+                  replies: {
+                    orderBy: { createdAt: "asc" },
+                  },
                 },
               },
             },
           },
         },
-      },
-      orderBy: {
-        requestedAt: "desc",
-      },
-    });
+        orderBy: {
+          requestedAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      db.sampleRequest.count({ where: whereClause }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /**

@@ -19,7 +19,7 @@ async function main() {
     prisma.team.create({
       data: {
         name: "Marketing",
-        address: "123 Fashion Ave, New York, NY 10001",
+        shippingAddress: "123 Fashion Ave, New York, NY 10001",
         contactEmail: "marketing@company.com",
         contactPhone: "+1-555-0101",
         isInternal: true,
@@ -28,7 +28,7 @@ async function main() {
     prisma.team.create({
       data: {
         name: "Runway",
-        address: "456 Runway Blvd, New York, NY 10002",
+        shippingAddress: "456 Runway Blvd, New York, NY 10002",
         contactEmail: "runway@company.com",
         contactPhone: "+1-555-0102",
         isInternal: true,
@@ -37,7 +37,7 @@ async function main() {
     prisma.team.create({
       data: {
         name: "E-commerce",
-        address: "789 Digital St, New York, NY 10003",
+        shippingAddress: "789 Digital St, New York, NY 10003",
         contactEmail: "ecommerce@company.com",
         contactPhone: "+1-555-0103",
         isInternal: true,
@@ -46,7 +46,7 @@ async function main() {
     prisma.team.create({
       data: {
         name: "External Photographer - Studio X",
-        address: "321 Photo Lane, Los Angeles, CA 90001",
+        shippingAddress: "321 Photo Lane, Los Angeles, CA 90001",
         contactEmail: "contact@studiox.com",
         contactPhone: "+1-555-0201",
         isInternal: false,
@@ -132,24 +132,32 @@ async function main() {
           });
           sampleItems.push(sampleItem);
 
-          // Create inventory entries with varied quantities
-          const quantity = 
+          // Create individual inventory records (one per item)
+          const itemCount = 
             stage === "PROTOTYPE" ? 1 : 
             stage === "DEVELOPMENT" ? 2 : 
             3;
           
-          const location = 
-            stage === "PROTOTYPE" ? "STUDIO_A" : 
-            stage === "DEVELOPMENT" ? "WAREHOUSE_B" : 
-            "WAREHOUSE_C";
-
-          await prisma.sampleInventory.create({
-            data: {
+          // Vary locations and statuses for more realistic data
+          const locations = ["STUDIO_A", "STUDIO_B", "WAREHOUSE_A", "WAREHOUSE_B", "WAREHOUSE_C", "SHOWROOM", "PHOTO_STUDIO"] as const;
+          const statuses: Array<"AVAILABLE" | "IN_USE" | "RESERVED" | "DAMAGED"> = ["AVAILABLE", "IN_USE", "RESERVED"];
+          
+          // Create individual inventory records
+          const inventoryRecords = [];
+          for (let i = 0; i < itemCount; i++) {
+            const location = locations[i % locations.length];
+            const status = i === 0 ? "AVAILABLE" : statuses[i % statuses.length];
+            
+            inventoryRecords.push({
               sampleItemId: sampleItem.id,
-              quantity,
               location,
-              status: "AVAILABLE",
-            },
+              status,
+              notes: i === 0 && stage === "PRODUCTION" ? "Primary stock item" : null,
+            });
+          }
+          
+          await prisma.sampleInventory.createMany({
+            data: inventoryRecords,
           });
         }
       }
@@ -158,7 +166,7 @@ async function main() {
 
   console.log(`✅ Created ${sampleItems.length} sample items with inventory`);
 
-  // Create some sample requests
+  // Create some sample requests with varied statuses
   const requests = await Promise.all([
     prisma.sampleRequest.create({
       data: {
@@ -167,6 +175,7 @@ async function main() {
         quantity: 1,
         status: "APPROVED",
         shippingMethod: "Internal Hand-off",
+        shippingAddress: "123 Fashion Ave, New York, NY 10001",
         notes: "Needed for photoshoot next week",
         requestedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
         approvedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
@@ -179,6 +188,7 @@ async function main() {
         quantity: 2,
         status: "IN_USE",
         shippingMethod: "Internal Hand-off",
+        shippingAddress: "456 Runway Blvd, New York, NY 10002",
         notes: "For runway show preparation",
         requestedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
         approvedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
@@ -192,6 +202,7 @@ async function main() {
         quantity: 1,
         status: "SHIPPED",
         shippingMethod: "FedEx Overnight",
+        shippingAddress: "321 Photo Lane, Los Angeles, CA 90001",
         notes: "External photographer for campaign",
         requestedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
         approvedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
@@ -205,7 +216,37 @@ async function main() {
         quantity: 1,
         status: "REQUESTED",
         shippingMethod: "Internal Hand-off",
+        shippingAddress: "789 Digital St, New York, NY 10003",
         notes: "For product page photography",
+      },
+    }),
+    prisma.sampleRequest.create({
+      data: {
+        sampleItemId: sampleItems[10].id,
+        teamId: teams[0].id,
+        quantity: 1,
+        status: "RETURNED",
+        shippingMethod: "Internal Hand-off",
+        notes: "Returned after photoshoot",
+        requestedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+        approvedAt: new Date(Date.now() - 19 * 24 * 60 * 60 * 1000),
+        shippedAt: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000),
+        returnedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      },
+    }),
+    prisma.sampleRequest.create({
+      data: {
+        sampleItemId: sampleItems[15].id,
+        teamId: teams[1].id,
+        quantity: 1,
+        status: "CLOSED",
+        shippingMethod: "Internal Hand-off",
+        notes: "Completed request",
+        requestedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        approvedAt: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
+        shippedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
+        returnedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+        closedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
       },
     }),
   ]);
@@ -263,9 +304,9 @@ async function main() {
       data: {
         entityType: "SampleInventory",
         entityId: sampleItems[0].id,
-        action: "QUANTITY_UPDATED",
+        action: "CREATED",
         userId: "coordinator-1",
-        metadata: { quantity: 1 },
+        metadata: { location: "STUDIO_A", status: "AVAILABLE" },
       },
     }),
   ]);
