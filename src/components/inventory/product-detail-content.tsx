@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateSampleItemDialog } from "./create-sample-item-dialog";
 import { CommentThread } from "@/components/comments/comment-thread";
 import { CommentForm } from "@/components/comments/comment-form";
+import { ImageGallery } from "./image-gallery";
 import type { ProductionItemWithSamples } from "@/lib/types";
 
 type ProductDetailContentProps = {
@@ -31,8 +32,51 @@ export function ProductDetailContent({
     router.refresh();
   };
 
+  // Collect all images for the gallery
+  const images = [];
+  // Add production item images
+  if (productionItem.imageUrls && productionItem.imageUrls.length > 0) {
+    productionItem.imageUrls.forEach((url, index) => {
+      images.push({
+        url,
+        alt: `${productionItem.name} - View ${index + 1}`,
+      });
+    });
+  }
+  // Add sample-specific images if available
+  productionItem.sampleItems?.forEach((sample) => {
+    if (sample.imageUrls && sample.imageUrls.length > 0) {
+      sample.imageUrls.forEach((url, index) => {
+        if (!images.find((img) => img.url === url)) {
+          images.push({
+            url,
+            alt: `${productionItem.name} - ${sample.stage} ${sample.color || ""} ${sample.size || ""} - View ${index + 1}`.trim(),
+          });
+        }
+      });
+    }
+  });
+
   return (
     <div className="space-y-6">
+      {/* Image Gallery */}
+      {images.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Product Images
+            </CardTitle>
+            <CardDescription>
+              {images.length} {images.length === 1 ? "image" : "images"} available
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ImageGallery images={images} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* No Samples Warning */}
       <Card className="border-dashed border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
         <CardHeader>

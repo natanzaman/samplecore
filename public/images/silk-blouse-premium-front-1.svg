@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="1000" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f5dc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d4af37;stop-opacity:0.7" />
+    </linearGradient>
+    <filter id="shadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="2" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="800" height="1000" fill="url(#grad)" opacity="0.1"/>
+  
+          <ellipse cx="400" cy="200" rx="180" ry="150" fill="#f5f5dc" opacity="0.9"/>
+          <path d="M 220 200 Q 200 300 220 500 L 250 700 L 350 750 L 450 750 L 550 700 L 580 500 Q 600 300 580 200" 
+                fill="#f5f5dc" opacity="0.8" stroke="#d4af37" stroke-width="2"/>
+          <circle cx="350" cy="250" r="8" fill="#d4af37"/>
+          <circle cx="450" cy="250" r="8" fill="#d4af37"/>
+          <path d="M 350 300 Q 400 350 450 300" stroke="#d4af37" stroke-width="2" fill="none"/>
+        
+  <text x="400" y="950" font-family="Arial, sans-serif" font-size="24" 
+        font-weight="bold" fill="#d4af37" text-anchor="middle" opacity="0.8">Silk Blouse Premium - front</text>
+</svg>

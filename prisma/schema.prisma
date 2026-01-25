@@ -103,6 +103,7 @@ model ProductionItem {
   id          String       @id @default(cuid())
   name        String
   description String?
+  imageUrls   String[]     @default([]) // Multiple product images
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -124,6 +125,7 @@ model SampleItem {
   size             SampleSize?
   revision         String            @default("A")
   notes            String?
+  imageUrls        String[]          @default([]) // Multiple sample-specific images
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 

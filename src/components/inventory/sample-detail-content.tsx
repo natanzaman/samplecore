@@ -18,6 +18,7 @@ import { CreateRequestDialog } from "@/components/requests/create-request-dialog
 import { CreateSampleItemDialog } from "@/components/inventory/create-sample-item-dialog";
 import { CommentForm } from "@/components/comments/comment-form";
 import { CommentThread } from "@/components/comments/comment-thread";
+import { ImageGallery } from "@/components/inventory/image-gallery";
 import { formatDate } from "@/lib/utils";
 import { formatColor } from "@/lib/color-utils";
 import { formatSize } from "@/lib/size-utils";
@@ -42,14 +43,14 @@ export function SampleDetailContent({
   const modal = useModal();
   const [showCreateRequest, setShowCreateRequest] = useState(false);
   const [showCreateSampleItem, setShowCreateSampleItem] = useState(false);
-  const [selectedStage, setSelectedStage] = useState<string>(initialSampleItem.stage);
+  const [selectedStage, setSelectedStage] = useState<string>(viewMode === "product" ? "all" : initialSampleItem.stage);
   const [inventoryLocationCollapsed, setInventoryLocationCollapsed] = useState<Map<string, boolean>>(new Map());
   const [allInventoryCollapsed, setAllInventoryCollapsed] = useState(true);
   const [sampleItemGroupCollapsed, setSampleItemGroupCollapsed] = useState<Map<string, boolean>>(new Map());
   const [sizeGroupCollapsed, setSizeGroupCollapsed] = useState<Map<string, boolean>>(new Map());
   const [colorGroupCollapsed, setColorGroupCollapsed] = useState<Map<string, boolean>>(new Map());
-  const [selectedColor, setSelectedColor] = useState<string>(initialSampleItem.color || "all");
-  const [selectedSize, setSelectedSize] = useState<string>(initialSampleItem.size || "all");
+  const [selectedColor, setSelectedColor] = useState<string>(viewMode === "product" ? "all" : (initialSampleItem.color || "all"));
+  const [selectedSize, setSelectedSize] = useState<string>(viewMode === "product" ? "all" : (initialSampleItem.size || "all"));
   const [currentSampleItem, setCurrentSampleItem] = useState<SampleItemWithRelations>(initialSampleItem);
   const [currentProductionItem, setCurrentProductionItem] = useState<ProductionItemWithSamples | undefined>(productionItem);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +63,7 @@ export function SampleDetailContent({
   const isInitialMount = useRef(true);
   const hasNavigated = useRef(false);
 
-  // Get available options filtered by selected stage
+  // Get available options - colors and sizes filtered by selected stage
   const availableOptions = useMemo(() => {
     if (!productionItem) return { stages: [], colors: [], sizes: [] };
 
@@ -70,16 +71,17 @@ export function SampleDetailContent({
     const colors = new Set<string>();
     const sizes = new Set<string>();
 
-    // Filter sample items by selected stage
-    const stageFilteredItems = productionItem.sampleItems.filter(
-      (item) => item.stage === selectedStage
-    );
-
+    // Get all stages
     productionItem.sampleItems.forEach((item) => {
       if (item.stage) stages.add(item.stage);
     });
 
-    // Only include colors and sizes available for the selected stage
+    // Filter by selected stage for colors and sizes
+    const stageFilteredItems = productionItem.sampleItems.filter(
+      (item) => selectedStage === "all" || item.stage === selectedStage
+    );
+
+    // Get colors and sizes from filtered items
     stageFilteredItems.forEach((item) => {
       if (item.color) colors.add(item.color);
       if (item.size) sizes.add(item.size);
@@ -96,23 +98,28 @@ export function SampleDetailContent({
   const selectedSampleItem = useMemo(() => {
     if (!productionItem) return initialSampleItem;
 
+    // If all filters are "all", use the initial sample item
+    if (selectedStage === "all" && selectedColor === "all" && selectedSize === "all") {
+      return initialSampleItem;
+    }
+
     // First try exact match
     let filtered = productionItem.sampleItems.find(
       (item) =>
-        item.stage === selectedStage &&
+        (selectedStage === "all" || item.stage === selectedStage) &&
         (selectedColor === "all" || item.color === selectedColor) &&
         (selectedSize === "all" || item.size === selectedSize)
     );
 
     // If no exact match, try stage + color
-    if (!filtered && selectedColor !== "all") {
+    if (!filtered && selectedColor !== "all" && selectedStage !== "all") {
       filtered = productionItem.sampleItems.find(
         (item) => item.stage === selectedStage && item.color === selectedColor
       );
     }
 
     // If still no match, try just stage
-    if (!filtered) {
+    if (!filtered && selectedStage !== "all") {
       filtered = productionItem.sampleItems.find((item) => item.stage === selectedStage);
     }
 
@@ -128,35 +135,30 @@ export function SampleDetailContent({
   useEffect(() => {
     setCurrentSampleItem(initialSampleItem);
     setCurrentProductionItem(productionItem);
-    setSelectedStage(initialSampleItem.stage);
-    setSelectedColor(initialSampleItem.color || "all");
-    setSelectedSize(initialSampleItem.size || "all");
-  }, [initialSampleItem.id, productionItem?.id]);
+    if (viewMode === "sample") {
+      setSelectedStage(initialSampleItem.stage);
+      setSelectedColor(initialSampleItem.color || "all");
+      setSelectedSize(initialSampleItem.size || "all");
+    } else {
+      // In product view, keep filters as "all" unless explicitly changed
+      setSelectedStage(selectedStage || "all");
+      setSelectedColor(selectedColor || "all");
+      setSelectedSize(selectedSize || "all");
+    }
+  }, [initialSampleItem.id, productionItem?.id, viewMode]);
 
-  // Auto-select first color and size when stage changes
+  // Note: Removed auto-select logic - filters now work independently
+
+  // Fetch and update sample data when selected sample changes (without navigation)
+  // In product view, don't change the displayed sample item when filters change - only filter inventory
   useEffect(() => {
     if (!productionItem || isInitialMount.current) return;
     
-    // Only auto-select if stage actually changed from initial
-    if (selectedStage === initialSampleItem.stage) return;
-
-    const stageFilteredItems = productionItem.sampleItems.filter(
-      (item) => item.stage === selectedStage
-    );
-
-    if (stageFilteredItems.length > 0) {
-      const firstItem = stageFilteredItems[0];
-      const newColor = firstItem.color || "all";
-      const newSize = firstItem.size || "all";
-      
-      setSelectedColor(newColor);
-      setSelectedSize(newSize);
+    // In product view, don't auto-switch the displayed sample item when filters change
+    // Keep showing the initial sample item and only filter the inventory below
+    if (viewMode === "product") {
+      return;
     }
-  }, [selectedStage, productionItem, initialSampleItem.stage]);
-
-  // Fetch and update sample data when selected sample changes (without navigation)
-  useEffect(() => {
-    if (!productionItem || isInitialMount.current) return;
     
     // Only fetch if the selected sample is different from the current one
     if (selectedSampleItem.id !== currentSampleItem.id && !hasNavigated.current) {
@@ -178,7 +180,7 @@ export function SampleDetailContent({
           setIsLoading(false);
         });
     }
-  }, [selectedSampleItem.id, currentSampleItem.id, router, productionItem]);
+  }, [selectedSampleItem.id, currentSampleItem.id, router, productionItem, viewMode]);
 
   // Reset navigation flag when filters change
   useEffect(() => {
@@ -207,7 +209,7 @@ export function SampleDetailContent({
     });
   };
 
-  // Collect inventory based on view mode
+  // Collect inventory based on view mode and filters
   const allInventory = useMemo(() => {
     if (viewMode === "sample") {
       // Sample view: only show current sample's inventory
@@ -222,7 +224,7 @@ export function SampleDetailContent({
         },
       }));
     } else {
-      // Product view: show all inventory from all sample items
+      // Product view: show all inventory from all sample items, filtered by selected filters
       if (!currentProductionItem) return [];
       const inventory: Array<{
         id: string;
@@ -238,22 +240,29 @@ export function SampleDetailContent({
         };
       }> = [];
       for (const si of currentProductionItem.sampleItems) {
-        for (const inv of si.inventory) {
-          inventory.push({
-            ...inv,
-            sampleItem: {
-              id: si.id,
-              stage: si.stage,
-              color: si.color,
-              size: si.size,
-              revision: si.revision,
-            },
-          });
+        // Apply filters
+        const matchesStage = selectedStage === "all" || si.stage === selectedStage;
+        const matchesColor = selectedColor === "all" || si.color === selectedColor;
+        const matchesSize = selectedSize === "all" || si.size === selectedSize;
+        
+        if (matchesStage && matchesColor && matchesSize) {
+          for (const inv of si.inventory) {
+            inventory.push({
+              ...inv,
+              sampleItem: {
+                id: si.id,
+                stage: si.stage,
+                color: si.color,
+                size: si.size,
+                revision: si.revision,
+              },
+            });
+          }
         }
       }
       return inventory;
     }
-  }, [viewMode, currentProductionItem, currentSampleItem]);
+  }, [viewMode, currentProductionItem, currentSampleItem, selectedStage, selectedColor, selectedSize]);
 
   const totalAllInventoryCount = allInventory.length;
 
@@ -437,97 +446,65 @@ export function SampleDetailContent({
     });
   };
 
+  // Collect all images for the gallery
+  // Note: ImageGallery component will handle filtering out missing images
+  const images = [];
+  // Add production item images
+  if (currentProductionItem?.imageUrls && currentProductionItem.imageUrls.length > 0) {
+    currentProductionItem.imageUrls.forEach((url, index) => {
+      images.push({
+        url,
+        alt: `${currentProductionItem.name} - View ${index + 1}`,
+      });
+    });
+  }
+  // Add current sample item images
+  if (currentSampleItem.imageUrls && currentSampleItem.imageUrls.length > 0) {
+    currentSampleItem.imageUrls.forEach((url, index) => {
+      if (!images.find((img) => img.url === url)) {
+        images.push({
+          url,
+          alt: `${currentProductionItem?.name || "Sample"} - ${currentSampleItem.stage} ${currentSampleItem.color || ""} ${currentSampleItem.size || ""} - View ${index + 1}`.trim(),
+        });
+      }
+    });
+  }
+  // Add other sample images if in product view
+  if (viewMode === "product" && currentProductionItem) {
+    currentProductionItem.sampleItems?.forEach((sample) => {
+      if (sample.imageUrls && sample.imageUrls.length > 0) {
+        sample.imageUrls.forEach((url, index) => {
+          if (!images.find((img) => img.url === url)) {
+            images.push({
+              url,
+              alt: `${currentProductionItem.name} - ${sample.stage} ${sample.color || ""} ${sample.size || ""} - View ${index + 1}`.trim(),
+            });
+          }
+        });
+      }
+    });
+  }
+
   return (
     <div className="space-y-6">
-      {/* Filter Controls - Only show in product view */}
-      {viewMode === "product" && productionItem && productionItem.sampleItems.length > 0 && (
+      {/* Image Gallery */}
+      {images.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Filter Sample Variations</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              {viewMode === "product" ? "Product Images" : "Sample Images"}
+            </CardTitle>
             <CardDescription>
-              Select stage, color, and size to view different sample variations
+              {images.length} {images.length === 1 ? "image" : "images"} available
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="stage-filter">Stage</Label>
-                <Select
-                  value={selectedStage}
-                  onValueChange={(value) => {
-                    setSelectedStage(value);
-                    // Color and size will be auto-selected by useEffect
-                  }}
-                >
-                  <SelectTrigger id="stage-filter">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableOptions.stages.map((stage) => (
-                      <SelectItem key={stage} value={stage}>
-                        {stage}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="color-filter">Color</Label>
-                <Select
-                  value={selectedColor}
-                  onValueChange={(value) => {
-                    setSelectedColor(value);
-                    // If color changes, try to keep size if it's still valid, otherwise reset
-                    const stageFilteredItems = productionItem?.sampleItems.filter(
-                      (item) => item.stage === selectedStage && (value === "all" || item.color === value)
-                    ) || [];
-                    const validSizes = new Set(stageFilteredItems.map(item => item.size).filter(Boolean));
-                    if (selectedSize !== "all" && !validSizes.has(selectedSize)) {
-                      const firstItem = stageFilteredItems.find(item => item.size) || stageFilteredItems[0];
-                      setSelectedSize(firstItem?.size || "all");
-                    }
-                  }}
-                >
-                  <SelectTrigger id="color-filter">
-                    <SelectValue placeholder="All Colors" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Colors</SelectItem>
-                    {availableOptions.colors.map((color) => (
-                      <SelectItem key={color} value={color}>
-                        {formatColor(color)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="size-filter">Size</Label>
-                <Select
-                  value={selectedSize}
-                  onValueChange={(value) => {
-                    setSelectedSize(value);
-                  }}
-                >
-                  <SelectTrigger id="size-filter">
-                    <SelectValue placeholder="All Sizes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sizes</SelectItem>
-                    {availableOptions.sizes.map((size) => (
-                      <SelectItem key={size} value={size}>
-                        {formatSize(size)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+          <CardContent>
+            <ImageGallery images={images} />
           </CardContent>
         </Card>
       )}
+
 
       {/* View Mode Toggle and Sample Info */}
       <div className="flex items-start justify-between">
@@ -608,6 +585,82 @@ export function SampleDetailContent({
               Inventory
             </CardTitle>
           </div>
+          {/* Filter Controls - Only show in product view */}
+          {viewMode === "product" && productionItem && productionItem.sampleItems.length > 0 && (
+            <div className="mt-4 space-y-4">
+              <CardDescription>
+                Filter inventory by stage, color, and size
+              </CardDescription>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="stage-filter">Stage</Label>
+                  <Select
+                    value={selectedStage}
+                    onValueChange={(value) => {
+                      setSelectedStage(value);
+                      // Color and size will be auto-selected by useEffect
+                    }}
+                  >
+                    <SelectTrigger id="stage-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Stages</SelectItem>
+                      {availableOptions.stages.map((stage) => (
+                        <SelectItem key={stage} value={stage}>
+                          {stage}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="color-filter">Color</Label>
+                  <Select
+                    value={selectedColor}
+                    onValueChange={(value) => {
+                      setSelectedColor(value);
+                    }}
+                  >
+                    <SelectTrigger id="color-filter">
+                      <SelectValue placeholder="All Colors" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Colors</SelectItem>
+                      {availableOptions.colors.map((color) => (
+                        <SelectItem key={color} value={color}>
+                          {formatColor(color)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="size-filter">Size</Label>
+                  <Select
+                    value={selectedSize}
+                    onValueChange={(value) => {
+                      setSelectedSize(value);
+                    }}
+                  >
+                    <SelectTrigger id="size-filter">
+                      <SelectValue placeholder="All Sizes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sizes</SelectItem>
+                      {availableOptions.sizes.map((size) => (
+                        <SelectItem key={size} value={size}>
+                          {formatSize(size)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-2">

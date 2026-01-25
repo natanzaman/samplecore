@@ -56,30 +56,89 @@ async function main() {
 
   console.log(`✅ Created ${teams.length} teams`);
 
-  // Create Production Items
+  // Create Production Items with multiple images (8 images per product)
   const productionItems = await Promise.all([
     prisma.productionItem.create({
       data: {
         name: "Denim Jacket X",
         description: "Classic denim jacket with modern fit",
+        imageUrls: [
+          "/images/denim-jacket-x-front-1.svg",
+          "/images/denim-jacket-x-back-2.svg",
+          "/images/denim-jacket-x-detail-3.svg",
+          "/images/denim-jacket-x-side-4.svg",
+          "/images/denim-jacket-x-angle-5.svg",
+          "/images/denim-jacket-x-closeup-6.svg",
+          "/images/denim-jacket-x-texture-7.svg",
+          "/images/denim-jacket-x-styling-8.svg",
+        ],
       },
     }),
     prisma.productionItem.create({
       data: {
         name: "Silk Blouse Premium",
         description: "Luxury silk blouse with intricate detailing",
+        imageUrls: [
+          "/images/silk-blouse-premium-front-1.svg",
+          "/images/silk-blouse-premium-back-2.svg",
+          "/images/silk-blouse-premium-detail-3.svg",
+          "/images/silk-blouse-premium-side-4.svg",
+          "/images/silk-blouse-premium-angle-5.svg",
+          "/images/silk-blouse-premium-closeup-6.svg",
+          "/images/silk-blouse-premium-texture-7.svg",
+          "/images/silk-blouse-premium-styling-8.svg",
+        ],
       },
     }),
     prisma.productionItem.create({
       data: {
         name: "Wool Coat Classic",
         description: "Timeless wool coat for winter collection",
+        imageUrls: [
+          "/images/wool-coat-classic-front-1.svg",
+          "/images/wool-coat-classic-back-2.svg",
+          "/images/wool-coat-classic-detail-3.svg",
+          "/images/wool-coat-classic-side-4.svg",
+          "/images/wool-coat-classic-angle-5.svg",
+          "/images/wool-coat-classic-closeup-6.svg",
+          "/images/wool-coat-classic-texture-7.svg",
+          "/images/wool-coat-classic-styling-8.svg",
+        ],
       },
     }),
     prisma.productionItem.create({
       data: {
         name: "Cotton T-Shirt Essential",
         description: "Basic cotton tee with premium feel",
+        imageUrls: [
+          "/images/cotton-t-shirt-essential-front-1.svg",
+          "/images/cotton-t-shirt-essential-back-2.svg",
+          "/images/cotton-t-shirt-essential-detail-3.svg",
+          "/images/cotton-t-shirt-essential-side-4.svg",
+          "/images/cotton-t-shirt-essential-angle-5.svg",
+          "/images/cotton-t-shirt-essential-closeup-6.svg",
+          "/images/cotton-t-shirt-essential-texture-7.svg",
+          "/images/cotton-t-shirt-essential-styling-8.svg",
+        ],
+      },
+    }),
+    prisma.productionItem.create({
+      data: {
+        name: "Test Product - No Samples",
+        description: "This is a test product with no samples and no images for testing purposes",
+        imageUrls: [], // No images
+      },
+    }),
+    prisma.productionItem.create({
+      data: {
+        name: "Leather Jacket Classic",
+        description: "Premium leather jacket - BROWN available in S and M only, NOT in L",
+        imageUrls: [
+          "/images/leather-jacket-classic-front-1.svg",
+          "/images/leather-jacket-classic-back-2.svg",
+          "/images/leather-jacket-classic-detail-3.svg",
+          "/images/leather-jacket-classic-side-4.svg",
+        ],
       },
     }),
   ]);
@@ -90,6 +149,70 @@ async function main() {
   const sampleItems = [];
 
   for (const prodItem of productionItems) {
+    // Skip creating samples for test products
+    if (prodItem.name === "Test Product - No Samples") {
+      continue;
+    }
+    
+    // Special case: Leather Jacket Classic - BROWN only in S and M, not L
+    if (prodItem.name === "Leather Jacket Classic") {
+      const stages: Array<"PROTOTYPE" | "DEVELOPMENT" | "PRODUCTION"> = [
+        "PROTOTYPE",
+        "DEVELOPMENT",
+        "PRODUCTION",
+      ];
+      const colors = ["BLACK", "BROWN", "NAVY"];
+      const sizes = ["S", "M", "L"] as const;
+      
+      for (const stage of stages) {
+        for (const color of colors) {
+          for (const size of sizes) {
+            // Skip BROWN + L combination
+            if (color === "BROWN" && size === "L") {
+              continue;
+            }
+            
+            const revision = stage === "PROTOTYPE" ? "A" : stage === "DEVELOPMENT" ? "B" : "C";
+            
+            const sampleItem = await prisma.sampleItem.create({
+              data: {
+                productionItemId: prodItem.id,
+                stage,
+                color,
+                size,
+                revision,
+                notes: `Leather jacket ${stage} sample - ${color} ${size}`,
+              },
+            });
+            sampleItems.push(sampleItem);
+            
+            // Create inventory
+            const itemCount = stage === "PROTOTYPE" ? 1 : stage === "DEVELOPMENT" ? 2 : 3;
+            const locations = ["STUDIO_A", "STUDIO_B", "WAREHOUSE_A"] as const;
+            const statuses: Array<"AVAILABLE" | "IN_USE" | "RESERVED"> = ["AVAILABLE", "IN_USE", "RESERVED"];
+            
+            const inventoryRecords = [];
+            for (let i = 0; i < itemCount; i++) {
+              const location = locations[i % locations.length];
+              const status = i === 0 ? "AVAILABLE" : statuses[i % statuses.length];
+              
+              inventoryRecords.push({
+                sampleItemId: sampleItem.id,
+                location,
+                status,
+                notes: i === 0 && stage === "PRODUCTION" ? "Primary stock item" : null,
+              });
+            }
+            
+            await prisma.sampleInventory.createMany({
+              data: inventoryRecords,
+            });
+          }
+        }
+      }
+      continue; // Skip the regular sample creation for this product
+    }
+    
     // Create multiple stages/colors/sizes for each production item
     const stages: Array<"PROTOTYPE" | "DEVELOPMENT" | "PRODUCTION"> = [
       "PROTOTYPE",
@@ -98,15 +221,16 @@ async function main() {
     ];
     
     // Different color palettes for different items (using enum values)
+    // Some colors removed to test missing color scenarios
     const colorPalettes: Record<string, string[]> = {
-      "Denim Jacket X": ["BLACK", "NAVY", "LIGHT_BLUE", "WHITE"],
-      "Silk Blouse Premium": ["BLACK", "IVORY", "ROSE", "SAGE"],
-      "Wool Coat Classic": ["BLACK", "CAMEL", "CHARCOAL", "NAVY"],
-      "Cotton T-Shirt Essential": ["WHITE", "BLACK", "GRAY", "NAVY"],
+      "Denim Jacket X": ["BLACK", "NAVY", "WHITE"], // Removed LIGHT_BLUE
+      "Silk Blouse Premium": ["BLACK", "IVORY", "SAGE"], // Removed ROSE
+      "Wool Coat Classic": ["BLACK", "CAMEL", "NAVY"], // Removed CHARCOAL
+      "Cotton T-Shirt Essential": ["WHITE", "BLACK", "GRAY"], // Removed NAVY
     };
     
-    const colors = colorPalettes[prodItem.name] || ["BLACK", "NAVY", "WHITE", "BEIGE"];
-    const sizes = ["XS", "S", "M", "L", "XL"] as const;
+    const colors = colorPalettes[prodItem.name] || ["BLACK", "NAVY", "WHITE"];
+    const sizes = ["S", "M", "L"] as const; // Removed XS and XL
 
     // Create all stages with all colors and sizes
     for (const stage of stages) {
@@ -162,6 +286,85 @@ async function main() {
         }
       }
     }
+    
+    // Create some sample items with null color or size to test edge cases
+    // Add a few samples with no color
+    for (const stage of stages.slice(0, 2)) { // PROTOTYPE and DEVELOPMENT only
+      for (const size of sizes.slice(0, 2)) { // S and M only
+        const revision = stage === "PROTOTYPE" ? "A" : "B";
+        const sampleItem = await prisma.sampleItem.create({
+          data: {
+            productionItemId: prodItem.id,
+            stage,
+            color: null, // No color
+            size,
+            revision,
+            notes: `Sample without color specification - ${stage}`,
+          },
+        });
+        sampleItems.push(sampleItem);
+        
+        // Create inventory for these
+        await prisma.sampleInventory.create({
+          data: {
+            sampleItemId: sampleItem.id,
+            location: "STUDIO_A",
+            status: "AVAILABLE",
+            notes: "No color specified",
+          },
+        });
+      }
+    }
+    
+    // Add a few samples with no size
+    for (const stage of stages.slice(0, 2)) { // PROTOTYPE and DEVELOPMENT only
+      for (const color of colors.slice(0, 2)) { // First 2 colors only
+        const revision = stage === "PROTOTYPE" ? "A" : "B";
+        const sampleItem = await prisma.sampleItem.create({
+          data: {
+            productionItemId: prodItem.id,
+            stage,
+            color,
+            size: null, // No size
+            revision,
+            notes: `Sample without size specification - ${stage}`,
+          },
+        });
+        sampleItems.push(sampleItem);
+        
+        // Create inventory for these
+        await prisma.sampleInventory.create({
+          data: {
+            sampleItemId: sampleItem.id,
+            location: "STUDIO_B",
+            status: "AVAILABLE",
+            notes: "No size specified",
+          },
+        });
+      }
+    }
+    
+    // Add one sample with neither color nor size
+    const sampleItemNoColorNoSize = await prisma.sampleItem.create({
+      data: {
+        productionItemId: prodItem.id,
+        stage: "PROTOTYPE",
+        color: null,
+        size: null,
+        revision: "A",
+        notes: "Sample without color or size specification",
+      },
+    });
+    sampleItems.push(sampleItemNoColorNoSize);
+    
+    await prisma.sampleInventory.create({
+      data: {
+        sampleItemId: sampleItemNoColorNoSize.id,
+        location: "STUDIO_A",
+        status: "AVAILABLE",
+        notes: "No color or size specified",
+      },
+    });
   }
 
   console.log(`✅ Created ${sampleItems.length} sample items with inventory`);
